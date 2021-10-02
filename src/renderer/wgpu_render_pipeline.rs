@@ -20,7 +20,7 @@ impl WGPURenderPipeline {
 		let swapchain_format = surface.get_preferred_format(&adapter).unwrap();
 
 		// @TODO: Programmable
-        let vertex_buffers = [
+		let vertex_buffers = [
 			// position
 			wgpu::VertexBufferLayout {
 				array_stride: 3 * 4,

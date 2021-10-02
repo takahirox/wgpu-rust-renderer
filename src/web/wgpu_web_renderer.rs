@@ -9,15 +9,15 @@ pub struct WGPUWebRenderer {
 
 impl Deref for WGPUWebRenderer {
 	type Target = WGPURenderer;
-    fn deref(&self) -> &WGPURenderer {
-        &self.renderer
-    }
+	fn deref(&self) -> &WGPURenderer {
+		&self.renderer
+	}
 }
 
 impl DerefMut for WGPUWebRenderer {
-    fn deref_mut(&mut self) -> &mut WGPURenderer {
-        &mut self.renderer
-    }
+	fn deref_mut(&mut self) -> &mut WGPURenderer {
+		&mut self.renderer
+	}
 }
 
 impl WGPUWebRenderer {

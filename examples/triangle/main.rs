@@ -58,25 +58,25 @@ async fn main() {
 
 	let scene = create_scene();
 
-    event_loop.run(move |event, _, control_flow| {
-        *control_flow = ControlFlow::Wait;
-        match event {
-            Event::WindowEvent {
-                event: WindowEvent::Resized(size),
-                ..
-            } => {
+	event_loop.run(move |event, _, control_flow| {
+		*control_flow = ControlFlow::Wait;
+		match event {
+			Event::WindowEvent {
+				event: WindowEvent::Resized(size),
+				..
+			} => {
 				renderer.set_size(size.width as f64, size.height as f64);
-            },
+			},
 			Event::RedrawRequested(_) => {
 				renderer.render(&scene);
-            },
-            Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                ..
-            } => {
+			},
+			Event::WindowEvent {
+				event: WindowEvent::CloseRequested,
+				..
+			} => {
 				*control_flow = ControlFlow::Exit;
 			},
-            _ => {}
-        }
+			_ => {}
+		}
 	});
 }

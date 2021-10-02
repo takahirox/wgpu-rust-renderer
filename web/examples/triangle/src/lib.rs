@@ -95,26 +95,26 @@ pub async fn start() {
 
 	let scene = create_scene();
 
-    event_loop.run(move |event, _, control_flow| {
-        *control_flow = ControlFlow::Wait;
-        match event {
-            Event::WindowEvent {
-                event: WindowEvent::Resized(_size),
-                ..
-            } => {
+	event_loop.run(move |event, _, control_flow| {
+		*control_flow = ControlFlow::Wait;
+		match event {
+			Event::WindowEvent {
+				event: WindowEvent::Resized(_size),
+				..
+			} => {
 				let size = get_window_inner_size();
-                renderer.set_size(size.0, size.1);
-            },
+				renderer.set_size(size.0, size.1);
+			},
 			Event::RedrawRequested(_) => {
 				renderer.render(&scene);
-            },
-            Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                ..
-            } => {
+			},
+			Event::WindowEvent {
+				event: WindowEvent::CloseRequested,
+				..
+			} => {
 				*control_flow = ControlFlow::Exit;
 			},
-            _ => {}
-        }
-    });
+			_ => {}
+		}
+	});
 }
