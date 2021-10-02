@@ -5,7 +5,12 @@ pub struct WGPURenderPipeline {
 }
 
 impl WGPURenderPipeline {
-	fn new(device: &wgpu::Device, adapter: &wgpu::Adapter, surface: &wgpu::Surface) -> Self {
+	fn new(
+		device: &wgpu::Device,
+		adapter: &wgpu::Adapter,
+		surface: &wgpu::Surface,
+		bind_group_layout: &wgpu::BindGroupLayout,
+	) -> Self {
 		let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
 			label: None,
 			source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("shader.wgsl"))),
@@ -13,7 +18,7 @@ impl WGPURenderPipeline {
 
 		let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
 			label: None,
-			bind_group_layouts: &[],
+			bind_group_layouts: &[bind_group_layout],
 			push_constant_ranges: &[],
 		});
 
@@ -82,12 +87,18 @@ impl WGPURenderPipelines {
 		}
 	}
 
-	pub fn get(&mut self, device: &wgpu::Device, adapter: &wgpu::Adapter, surface: &wgpu::Surface) -> &wgpu::RenderPipeline {
+	pub fn borrow(
+		&mut self,
+		device: &wgpu::Device,
+		adapter: &wgpu::Adapter,
+		surface: &wgpu::Surface,
+		bind_group_layout: &wgpu::BindGroupLayout,
+	) -> &wgpu::RenderPipeline {
 		if self.pipelines.len() > 0 {
 			return &self.pipelines.last().unwrap().pipeline;
 		}
 
-		self.pipelines.push(WGPURenderPipeline::new(device, adapter, surface));
+		self.pipelines.push(WGPURenderPipeline::new(device, adapter, surface, bind_group_layout));
 
 		&self.pipelines.last().unwrap().pipeline
 	}

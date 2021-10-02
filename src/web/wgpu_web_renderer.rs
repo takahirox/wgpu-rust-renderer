@@ -7,6 +7,8 @@ pub struct WGPUWebRenderer {
 	renderer: WGPURenderer,
 }
 
+// Using Deref/DerefMut for inheritance may be a bad design
+
 impl Deref for WGPUWebRenderer {
 	type Target = WGPURenderer;
 	fn deref(&self) -> &WGPURenderer {

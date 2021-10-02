@@ -2,6 +2,7 @@ use winit::window::Window;
 
 use crate::renderer::{
 	wgpu_attributes::WGPUAttributes,
+	wgpu_bindings::WGPUBindings,
 	wgpu_render_pipeline::WGPURenderPipelines,
 };
 use crate::scene::scene::Scene;
@@ -9,6 +10,7 @@ use crate::scene::scene::Scene;
 pub struct WGPURenderer {
 	adapter: wgpu::Adapter,
 	attributes: WGPUAttributes,
+	bindings: WGPUBindings,
 	device: wgpu::Device,
 	height: f64,
 	pixel_ratio: f64,
@@ -63,6 +65,7 @@ impl WGPURenderer {
 		WGPURenderer {
 			adapter: adapter,
 			attributes: WGPUAttributes::new(),
+			bindings: WGPUBindings::new(),
 			device: device,
 			height: height,
 			pixel_ratio: pixel_ratio,
@@ -99,7 +102,36 @@ impl WGPURenderer {
 	}
 
 	pub fn render(&mut self, scene: &Scene) {
-		let pipeline = self.render_pipelines.get(&self.device, &self.adapter, &self.surface);
+		for i in 0..scene.get_objects_num() {
+			let object = scene.borrow_object(i).unwrap();
+			if let Some(mesh) = scene.borrow_mesh(object.get_id()) {
+				let geometry = mesh.borrow_geometry();
+
+				// @TODO: Implement correctly
+				if let Some(attribute) = geometry.borrow_attribute("position") {
+					if self.attributes.borrow(attribute).is_none() {
+						self.attributes.update(&self.device, attribute);
+					}
+				}
+				if let Some(attribute) = geometry.borrow_attribute("normal") {
+					if self.attributes.borrow(attribute).is_none() {
+						self.attributes.update(&self.device, attribute);
+					}
+				}
+			}
+			self.bindings.update(
+				&self.device,
+				&self.queue,
+				object,
+			);
+		}
+
+		let pipeline = self.render_pipelines.borrow(
+			&self.device,
+			&self.adapter,
+			&self.surface,
+			&self.bindings.borrow().borrow_layout(),
+		);
 
 		let frame = self.surface
 			.get_current_frame()
@@ -133,35 +165,22 @@ impl WGPURenderer {
 				let object = scene.borrow_object(i).unwrap();
 				if let Some(mesh) = scene.borrow_mesh(object.get_id()) {
 					let geometry = mesh.borrow_geometry();
-					// @TODO: Implement correctly
-					if let Some(attribute) = geometry.borrow_attribute("position") {
-						if self.attributes.get(attribute).is_none() {
-							self.attributes.update(&self.device, attribute);
-						}
-					}
-					if let Some(attribute) = geometry.borrow_attribute("normal") {
-						if self.attributes.get(attribute).is_none() {
-							self.attributes.update(&self.device, attribute);
-						}
-					}
-				}
-			}
 
-			for i in 0..scene.get_objects_num() {
-				let object = scene.borrow_object(i).unwrap();
-				if let Some(mesh) = scene.borrow_mesh(object.get_id()) {
-					let geometry = mesh.borrow_geometry();
 					// @TODO: Should be programmable
 					if let Some(positions) = geometry.borrow_attribute("position") {
-						if let Some(buffer) = self.attributes.get(positions) {
+						if let Some(buffer) = self.attributes.borrow(positions) {
 							pass.set_vertex_buffer(0, buffer.slice(..));
 						}
 					}
 					if let Some(normals) = geometry.borrow_attribute("normal") {
-						if let Some(buffer) = self.attributes.get(normals) {
+						if let Some(buffer) = self.attributes.borrow(normals) {
 							pass.set_vertex_buffer(1, buffer.slice(..));
 						}
 					}
+
+					let binding = self.bindings.borrow();
+					pass.set_bind_group(0, &binding.borrow_group(), &[]);
+
 					let geometry = mesh.borrow_geometry();
 					let positions = geometry.borrow_attribute("position").unwrap();
 					pass.draw(0..positions.get_count(), 0..1);
