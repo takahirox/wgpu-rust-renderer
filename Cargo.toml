@@ -1,0 +1,36 @@
+[package]
+name = "wgpu_rust_renderer"
+version = "0.0.0"
+description = "Tiny WebGPU Renderer in Rust"
+authors = ["Takahiro <hogehoge@gachapin.jp>"]
+edition = "2018"
+license = "MIT"
+resolver = "2"
+homepage = "https://github.com/takahirox/wgpu-rust-renderer"
+repository = "https://github.com/takahirox/wgpu-rust-renderer"
+exclude = [
+  "screenshots/*",
+  "web/*"
+]
+
+[dependencies]
+winit = "0.25.0"
+wgpu = {git="https://github.com/gfx-rs/wgpu"}
+#wgpu = "0.10.2"
+
+[dependencies.bytemuck]
+version = "1.7.2"
+features = ["derive"]
+
+[dependencies.web-sys]
+version = "0.3.55"
+features = [
+  "CssStyleDeclaration",
+  "HtmlCanvasElement",
+]
+
+[dev-dependencies]
+tokio = {version = "1.12.0", features = ["full"]}
+
+[badges]
+travis-ci = {repository = "takahirox/wgpu-rust-renderer"}

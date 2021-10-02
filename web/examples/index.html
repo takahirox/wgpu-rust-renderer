@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>wgpu-rust-renderer web examples</title>
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="./index.css">
+  </head>
+  <body>
+    <div id="panel">
+      <div id="header">
+        <h1><a href="https://github.com/takahirox/wgpu-rust-renderer" target="_blank">wgpu-rust-renderer</a></h1>
+        <div id="expandButton"></div>
+      </div>
+      <div id="panelScrim"></div>
+      <div id="contentWrapper">
+        <div id="content"></div>
+      </div>
+    </div>
+
+    <iframe id="viewer" name="viewer" onmousewheel=""></iframe>
+
+    <script>
+      const categoryNames = [
+        'basic'
+      ];
+      const exampleNames = {
+        basic: [
+          'triangle'
+        ]
+      };
+
+      const content = document.getElementById('content');
+      const viewer = document.getElementById('viewer');
+      const panel = document.getElementById('panel');
+      const panelScrim = document.getElementById('panelScrim');
+      const expandButton = document.getElementById('expandButton');
+
+      const openExample = exampleName => {
+        viewer.src = exampleName + '/index.html';
+        window.location.hash = exampleName;
+        viewer.focus();
+        panel.classList.remove('open');
+      };
+
+      categoryNames.forEach(categoryName => {
+        const span = document.createElement('span');
+        span.innerText = categoryName;
+        content.appendChild(span);
+        const ul = document.createElement('ul');
+        content.appendChild(ul);
+        exampleNames[categoryName].forEach(name => {
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.innerText = name;
+          a.href = name + '/index.html';
+          a.target = 'viewer';
+          a.addEventListener('click', event => {
+            if (event.button !== 0 || event.ctrlKey || event.altKey ||
+              event.shiftKey || event.metaKey) {
+              return;
+            }
+            event.preventDefault();
+            openExample(name);
+          });
+          li.appendChild(a);
+          ul.appendChild(li);
+        });
+      });
+
+      const onClickForOpen = event => {
+        event.preventDefault();
+        panel.classList.toggle('open');
+      };
+
+      expandButton.addEventListener('click', onClickForOpen);
+      panelScrim.addEventListener('click', onClickForOpen);
+
+      // iOS iframe auto-resize workaround
+      if (/(iPad|iPhone|iPod)/g.test(navigator.userAgent)) {
+        viewer.style.width = getComputedStyle(viewer).width;
+        viewer.style.height = getComputedStyle(viewer).height;
+        viewer.setAttribute('scrolling', 'no');
+      }
+
+      if (window.location.hash !== '') {
+        const hash = window.location.hash.substring(1);
+        for (const categoryName of categoryNames) {
+          if (exampleNames[categoryName].includes(hash)) {
+            openExample(hash);
+            break;
+          }
+        }
+      }
+    </script>
+  </body>
+</html>
