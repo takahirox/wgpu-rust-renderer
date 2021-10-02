@@ -118,12 +118,14 @@ impl WGPURenderer {
 						self.attributes.update(&self.device, attribute);
 					}
 				}
+
+				self.bindings.update(
+					&self.device,
+					&self.queue,
+					object,
+					mesh,
+				);
 			}
-			self.bindings.update(
-				&self.device,
-				&self.queue,
-				object,
-			);
 		}
 
 		let pipeline = self.render_pipelines.borrow(

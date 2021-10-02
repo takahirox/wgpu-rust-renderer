@@ -4,6 +4,8 @@ use winit::{
 	window::Window,
 };
 use wgpu_rust_renderer::{
+	material::material::Material,
+	math::color::Color,
 	renderer::wgpu_renderer::WGPURenderer,
 	scene::{
 		attribute::AttributeManager,
@@ -37,7 +39,10 @@ fn create_scene() -> Scene {
 		3,
 	));
 
-	let mesh = Mesh::new(geometry);
+	let mut material = Material::new();
+	Color::set(material.borrow_color_mut(), 1.0, 0.0, 0.0);
+
+	let mesh = Mesh::new(geometry, material);
 	let id = scene.create_object();
 	scene.add_mesh(id, mesh);
 

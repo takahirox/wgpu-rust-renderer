@@ -1,18 +1,25 @@
+use crate::material::material::Material;
 use crate::scene::geometry::Geometry;
 
-// @TODO: Support shared geometry
+// @TODO: Support shared geometry and material
 pub struct Mesh {
-	geometry: Geometry
+	geometry: Geometry,
+	material: Material,
 }
 
 impl Mesh {
-	pub fn new(geometry: Geometry) -> Self {
+	pub fn new(geometry: Geometry, material: Material) -> Self {
 		Mesh {
-			geometry: geometry
+			geometry: geometry,
+			material: material,
 		}
 	}
 
 	pub fn borrow_geometry(&self) -> &Geometry {
 		&self.geometry
+	}
+
+	pub fn borrow_material(&self) -> &Material {
+		&self.material
 	}
 }

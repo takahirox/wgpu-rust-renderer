@@ -1,4 +1,7 @@
-use crate::scene::object::Object;
+use crate::scene::{
+	mesh::Mesh,
+	object::Object,
+};
 
 pub struct WGPUBinding {
 	buffers: Vec<wgpu::Buffer>,
@@ -52,6 +55,7 @@ impl WGPUBindings {
 		device: &wgpu::Device,
 		queue: &wgpu::Queue,
 		object: &Object,
+		mesh: &Mesh,
 	) {
 		if self.groups.len() == 0 {
 			let mut buffers = Vec::new();
@@ -65,7 +69,7 @@ impl WGPUBindings {
 		let binding = self.groups.last().unwrap();
 		queue.write_buffer(binding.borrow_buffer(0), 0, bytemuck::cast_slice(object.borrow_matrix()));
 		// @TODO: Fix me
-		queue.write_buffer(binding.borrow_buffer(1), 0, bytemuck::cast_slice(&[1.0, 0.5, 0.1]));
+		queue.write_buffer(binding.borrow_buffer(1), 0, bytemuck::cast_slice(mesh.borrow_material().borrow_color()));
 	}
 }
 
