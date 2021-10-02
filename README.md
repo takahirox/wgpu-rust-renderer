@@ -38,6 +38,9 @@ T.B.D.
 
 ## How to import
 
+T.B.D.
+
+<!--
 The library is released at [crates.io](https://crates.io/crates/wgpu_rust_renderer). Add the following line into Cargo.toml of your Rust project.
 
 ```
@@ -59,6 +62,7 @@ use wgpu_rust_renderer::{
   renderer::wgpu_renderer::WGPURenderer, // for others
 };
 ```
+-->
 
 ## How to build the library locally
 
