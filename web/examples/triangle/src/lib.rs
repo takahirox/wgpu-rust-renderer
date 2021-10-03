@@ -1,4 +1,7 @@
-use wasm_bindgen::prelude::*;
+use wasm_bindgen::{
+	prelude::*,
+	JsCast,
+};
 
 use winit::{
 	event::{Event, WindowEvent},
@@ -91,9 +94,9 @@ fn create_scene() -> Scene {
 	scene
 }
 
-fn resize(renderer: &mut WGPUWebRenderer, scene: &mut Scene, width: f64, height: f64) {
+fn resize(renderer: &mut WGPUWebRenderer, scene: &mut Scene, width: u32, height: u32) {
 	scene.borrow_active_camera_mut().unwrap().set_aspect(width as f32 / height as f32);
-	renderer.set_size(width, height);
+	renderer.set_size(width as f64, height as f64);
 	render(renderer, scene);
 }
 
@@ -102,13 +105,36 @@ fn render(renderer: &mut WGPUWebRenderer, scene: &mut Scene) {
 	renderer.render(scene);
 }
 
+fn create_window(event_loop: &EventLoop<()>) -> std::rc::Rc<winit::window::Window> {
+	let window = winit::window::Window::new(&event_loop).unwrap();
+	let window = std::rc::Rc::new(window);
+
+	// winit::window::Window doesn't seem to detect browser's onresize event so we emulate it.
+    {
+		let window = window.clone();
+		let closure = Closure::wrap(Box::new(move |_e: web_sys::Event| {
+			let size = get_window_inner_size();
+			window.set_inner_size(winit::dpi::PhysicalSize::new(
+				size.0, size.1,
+			));
+		}) as Box<dyn FnMut(_)>);
+		web_sys::window()
+			.unwrap()
+			.add_event_listener_with_callback("resize", closure.as_ref().unchecked_ref())
+			.unwrap();
+		closure.forget();
+    }
+
+	window
+}
+
 #[wasm_bindgen(start)]
 pub async fn start() {
 	std::panic::set_hook(Box::new(console_error_panic_hook::hook));
 	console_log::init().expect("could not initialize logger");
 
 	let event_loop = EventLoop::new();
-	let window = winit::window::Window::new(&event_loop).unwrap();
+	let window = create_window(&event_loop);
 
 	use winit::platform::web::WindowExtWebSys;
 
@@ -134,11 +160,10 @@ pub async fn start() {
 		*control_flow = ControlFlow::Wait;
 		match event {
 			Event::WindowEvent {
-				event: WindowEvent::Resized(_size),
+				event: WindowEvent::Resized(size),
 				..
 			} => {
-				let size = get_window_inner_size();
-				resize(&mut renderer, &mut scene, size.0, size.1);
+				resize(&mut renderer, &mut scene, size.width, size.height);
 			},
 			Event::RedrawRequested(_) => {
 				render(&mut renderer, &mut scene);
