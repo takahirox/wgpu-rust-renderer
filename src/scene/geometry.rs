@@ -1,16 +1,21 @@
 use std::collections::HashMap;
 
-use crate::scene::attribute::Attribute;
+use crate::scene::{
+	attribute::Attribute,
+	index::Index,
+};
 
 // @TODO: Support shared attribute
 pub struct Geometry {
-	attributes: HashMap<&'static str, Attribute>
+	attributes: HashMap<&'static str, Attribute>,
+	index: Option<Index>,
 }
 
 impl Geometry {
 	pub fn new() -> Self {
 		Geometry {
-			attributes: HashMap::new()
+			attributes: HashMap::new(),
+			index: None,
 		}
 	}
 
@@ -21,5 +26,19 @@ impl Geometry {
 
 	pub fn borrow_attribute(&self, key: &'static str) -> Option<&Attribute> {
 		self.attributes.get(key)
+	}
+
+	pub fn set_index(&mut self, index: Index) -> &mut Self {
+		self.index = Some(index);
+		self
+	}
+
+	pub fn remove_index(&mut self) -> &mut Self {
+		self.index = None;
+		self
+	}
+
+	pub fn borrow_index(&self) -> Option<&Index> {
+		self.index.as_ref()
 	}
 }

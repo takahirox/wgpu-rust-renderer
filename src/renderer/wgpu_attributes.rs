@@ -22,15 +22,19 @@ impl WGPUAttributes {
 	// @TODO: Implement correctly
 	pub fn update(&mut self, device: &wgpu::Device, attribute: &Attribute) {
 		if !self.attributes.contains_key(&attribute.get_id()) {
-			self.attributes.insert(attribute.get_id(), create_buffer(device, attribute.borrow_data()));
+			self.attributes.insert(attribute.get_id(), create_buffer(
+				device,
+				bytemuck::cast_slice(attribute.borrow_data()),
+				wgpu::BufferUsages::VERTEX,
+			));
 		}
 	}
 }
 
-fn create_buffer(device: &wgpu::Device, data: &[f32]) -> wgpu::Buffer {
+fn create_buffer(device: &wgpu::Device, contents: &[u8], usage: wgpu::BufferUsages) -> wgpu::Buffer {
 	device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
 		label: None,
-		contents: bytemuck::cast_slice(data),
-		usage: wgpu::BufferUsages::VERTEX,
+		contents:  contents,
+		usage: usage,
 	})
 }

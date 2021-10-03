@@ -3,6 +3,7 @@ use winit::window::Window;
 use crate::renderer::{
 	wgpu_attributes::WGPUAttributes,
 	wgpu_bindings::WGPUBindings,
+	wgpu_indices::WGPUIndices,
 	wgpu_render_pipeline::WGPURenderPipelines,
 };
 use crate::scene::scene::Scene;
@@ -13,6 +14,7 @@ pub struct WGPURenderer {
 	bindings: WGPUBindings,
 	device: wgpu::Device,
 	height: f64,
+	indices: WGPUIndices,
 	pixel_ratio: f64,
 	queue: wgpu::Queue,
 	render_pipelines: WGPURenderPipelines,
@@ -68,6 +70,7 @@ impl WGPURenderer {
 			bindings: WGPUBindings::new(),
 			device: device,
 			height: height,
+			indices: WGPUIndices::new(),
 			pixel_ratio: pixel_ratio,
 			queue: queue,
 			render_pipelines: WGPURenderPipelines::new(),
@@ -113,14 +116,14 @@ impl WGPURenderer {
 
 				// @TODO: Implement correctly
 				if let Some(attribute) = geometry.borrow_attribute("position") {
-					if self.attributes.borrow(attribute).is_none() {
-						self.attributes.update(&self.device, attribute);
-					}
+					self.attributes.update(&self.device, attribute);
 				}
 				if let Some(attribute) = geometry.borrow_attribute("normal") {
-					if self.attributes.borrow(attribute).is_none() {
-						self.attributes.update(&self.device, attribute);
-					}
+					self.attributes.update(&self.device, attribute);
+				}
+
+				if let Some(indices) = geometry.borrow_index() {
+					self.indices.update(&self.device, indices);
 				}
 
 				self.bindings.update(
@@ -189,9 +192,15 @@ impl WGPURenderer {
 					let binding = self.bindings.borrow();
 					pass.set_bind_group(0, &binding.borrow_group(), &[]);
 
-					let geometry = mesh.borrow_geometry();
-					let positions = geometry.borrow_attribute("position").unwrap();
-					pass.draw(0..positions.get_count(), 0..1);
+					if let Some(indices) = geometry.borrow_index() {
+						if let Some(buffer) = self.indices.borrow(indices) {
+							pass.set_index_buffer(buffer.slice(..), wgpu::IndexFormat::Uint16);
+							pass.draw_indexed(0..indices.get_count(), 0, 0..1);
+						}
+					} else {
+						let positions = geometry.borrow_attribute("position").unwrap();
+						pass.draw(0..positions.get_count(), 0..1);
+					}
 				}
 			}
 
