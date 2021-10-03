@@ -9,6 +9,7 @@ use wgpu_rust_renderer::{
 	math::color::Color,
 	material::material::Material,
 	scene::{
+		camera::PerspectiveCamera,
 		attribute::AttributeManager,
 		geometry::Geometry,
 		mesh::Mesh,
@@ -75,13 +76,39 @@ fn create_scene() -> Scene {
 	let id = scene.create_object();
 	scene.add_mesh(id, mesh);
 
+	let window_size = get_window_inner_size();
+	let camera = PerspectiveCamera::new(
+		60.0_f32.to_radians(),
+		window_size.0 as f32 / window_size.1 as f32,
+		0.1,
+		1000.0,
+	);
+	let id = scene.create_object();
+	scene.add_camera(id, camera);
+	scene.set_active_camera_id(id);
+
 	scene
+		.borrow_object_mut(id)
+		.unwrap()
+		.borrow_position_mut()[2] = 2.0;
+
+	scene
+}
+
+fn resize(renderer: &mut WGPUWebRenderer, scene: &mut Scene, width: f64, height: f64) {
+	scene.borrow_active_camera_mut().unwrap().set_aspect(width as f32 / height as f32);
+	renderer.set_size(width, height);
+	render(renderer, scene);
 }
 
 fn animate(scene: &mut Scene) {
 	let object = scene.borrow_object_mut(0).unwrap();
 	object.borrow_rotation_mut()[2] += 0.01;
-	object.update_matrix();
+}
+
+fn render(renderer: &mut WGPUWebRenderer, scene: &mut Scene) {
+	scene.update_matrices();
+	renderer.render(scene);
 }
 
 #[wasm_bindgen(start)]
@@ -120,14 +147,14 @@ pub async fn start() {
 				..
 			} => {
 				let size = get_window_inner_size();
-				renderer.set_size(size.0, size.1);
+				resize(&mut renderer, &mut scene, size.0, size.1);
 			},
 			Event::RedrawEventsCleared => {
                 window.request_redraw();
             },
 			Event::RedrawRequested(_) => {
 				animate(&mut scene);
-				renderer.render(&scene);
+				render(&mut renderer, &mut scene);
 			},
 			Event::WindowEvent {
 				event: WindowEvent::CloseRequested,

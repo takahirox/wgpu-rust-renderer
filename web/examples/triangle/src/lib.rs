@@ -9,6 +9,7 @@ use wgpu_rust_renderer::{
 	math::color::Color,
 	material::material::Material,
 	scene::{
+		camera::PerspectiveCamera,
 		attribute::AttributeManager,
 		geometry::Geometry,
 		mesh::Mesh,
@@ -44,11 +45,13 @@ fn create_scene() -> Scene {
 
 	let mut geometry = Geometry::new();
 
+	let dx = 0.5;
+	let dy = 0.75_f32.sqrt() / 2.0;
 	geometry.set_attribute("position", attribute_manager.create(
 		[
-			0.0, 0.5, 0.0,
-			0.5, -0.5, 0.0,
-			-0.5, -0.5, 0.0,
+			0.5 - dx, 0.75_f32.sqrt() - dy, 0.0,
+			1.0 - dx, 0.0 - dy, 0.0,
+			0.0 - dx, 0.0 - dy, 0.0,
 		].to_vec(),
 		3,
 	));
@@ -69,7 +72,34 @@ fn create_scene() -> Scene {
 	let id = scene.create_object();
 	scene.add_mesh(id, mesh);
 
+	let window_size = get_window_inner_size();
+	let camera = PerspectiveCamera::new(
+		60.0_f32.to_radians(),
+		(window_size.0 / window_size.1) as f32,
+		0.1,
+		1000.0,
+	);
+	let id = scene.create_object();
+	scene.add_camera(id, camera);
+	scene.set_active_camera_id(id);
+
 	scene
+		.borrow_object_mut(id)
+		.unwrap()
+		.borrow_position_mut()[2] = 1.0;
+
+	scene
+}
+
+fn resize(renderer: &mut WGPUWebRenderer, scene: &mut Scene, width: f64, height: f64) {
+	scene.borrow_active_camera_mut().unwrap().set_aspect(width as f32 / height as f32);
+	renderer.set_size(width, height);
+	render(renderer, scene);
+}
+
+fn render(renderer: &mut WGPUWebRenderer, scene: &mut Scene) {
+	scene.update_matrices();
+	renderer.render(scene);
 }
 
 #[wasm_bindgen(start)]
@@ -98,7 +128,7 @@ pub async fn start() {
 	renderer.set_size(inner_size.0 as f64, inner_size.1 as f64);
 	renderer.set_pixel_ratio(pixel_ratio as f64);
 
-	let scene = create_scene();
+	let mut scene = create_scene();
 
 	event_loop.run(move |event, _, control_flow| {
 		*control_flow = ControlFlow::Wait;
@@ -108,10 +138,10 @@ pub async fn start() {
 				..
 			} => {
 				let size = get_window_inner_size();
-				renderer.set_size(size.0, size.1);
+				resize(&mut renderer, &mut scene, size.0, size.1);
 			},
 			Event::RedrawRequested(_) => {
-				renderer.render(&scene);
+				render(&mut renderer, &mut scene);
 			},
 			Event::WindowEvent {
 				event: WindowEvent::CloseRequested,
