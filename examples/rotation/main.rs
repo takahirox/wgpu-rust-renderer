@@ -9,13 +9,14 @@ use wgpu_rust_renderer::{
 	renderer::wgpu_renderer::WGPURenderer,
 	scene::{
 		attribute::AttributeManager,
+		camera::PerspectiveCamera,
 		geometry::Geometry,
 		mesh::Mesh,
 		scene::Scene,
 	}
 };
 
-fn create_scene() -> Scene {
+fn create_scene(window: &Window) -> Scene {
 	let mut scene = Scene::new();
 	let mut attribute_manager = AttributeManager::new();
 
@@ -52,13 +53,39 @@ fn create_scene() -> Scene {
 	let id = scene.create_object();
 	scene.add_mesh(id, mesh);
 
+	let window_size = window.inner_size();
+	let camera = PerspectiveCamera::new(
+		60.0_f32.to_radians(),
+		window_size.width as f32 / window_size.height as f32,
+		0.1,
+		1000.0,
+	);
+	let id = scene.create_object();
+	scene.add_camera(id, camera);
+	scene.set_active_camera_id(id);
+
 	scene
+		.borrow_object_mut(id)
+		.unwrap()
+		.borrow_position_mut()[2] = 2.0;
+
+	scene
+}
+
+fn resize(renderer: &mut WGPURenderer, scene: &mut Scene, width: u32, height: u32) {
+	scene.borrow_active_camera_mut().unwrap().set_aspect(width as f32 / height as f32);
+	renderer.set_size(width as f64, height as f64);
+	render(renderer, scene);
 }
 
 fn animate(scene: &mut Scene) {
 	let object = scene.borrow_object_mut(0).unwrap();
 	object.borrow_rotation_mut()[2] += 0.01;
-	object.update_matrix();
+}
+
+fn render(renderer: &mut WGPURenderer, scene: &mut Scene) {
+	scene.update_matrices();
+	renderer.render(scene);
 }
 
 #[tokio::main]
@@ -73,7 +100,7 @@ async fn main() {
 	renderer.set_size(window_size.width as f64, window_size.height as f64);
 	renderer.set_pixel_ratio(pixel_ratio);
 
-	let mut scene = create_scene();
+	let mut scene = create_scene(&window);
 
 	event_loop.run(move |event, _, control_flow| {
 		*control_flow = ControlFlow::Poll;
@@ -82,14 +109,14 @@ async fn main() {
 				event: WindowEvent::Resized(size),
 				..
 			} => {
-				renderer.set_size(size.width as f64, size.height as f64);
+				resize(&mut renderer, &mut scene, size.width, size.height);
 			},
 			Event::RedrawEventsCleared => {
                 window.request_redraw();
             },
 			Event::RedrawRequested(_) => {
 				animate(&mut scene);
-				renderer.render(&scene);
+				render(&mut renderer, &mut scene);
 			},
 			Event::WindowEvent {
 				event: WindowEvent::CloseRequested,
