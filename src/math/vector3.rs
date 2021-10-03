@@ -15,4 +15,18 @@ impl Vector3 {
 		v[2] = z;
 		v
 	}
+
+	pub fn add<'a>(v: &'a mut Elements, v2: &'a Elements) -> &'a mut Elements {
+		for i in 0..ELEMENT_NUM {
+			v[i] += v2[i];
+		}
+		v
+	}
+
+	pub fn sub<'a>(v: &'a mut Elements, v2: &'a Elements) -> &'a mut Elements {
+		for i in 0..ELEMENT_NUM {
+			v[i] -= v2[i];
+		}
+		v
+	}
 }

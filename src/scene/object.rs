@@ -46,6 +46,10 @@ impl Object {
 		&self.position
 	}
 
+	pub fn borrow_position_mut(&mut self) -> &mut [f32; 3] {
+		&mut self.position
+	}
+
 	pub fn borrow_rotation(&self) -> &[f32; 3] {
 		&self.rotation
 	}

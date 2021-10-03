@@ -5,11 +5,19 @@ struct VertexOutput {
 
 [[block]]
 struct Object {
-	modelMatrix: mat4x4<f32>;
+	modelViewMatrix: mat4x4<f32>;
+};
+
+[[block]]
+struct Camera {
+	projectionMatrix: mat4x4<f32>;
 };
 
 [[group(0), binding(0)]]
 var<uniform> object: Object;
+
+[[group(0), binding(1)]]
+var<uniform> camera: Camera;
 
 [[stage(vertex)]]
 fn vs_main(
@@ -17,7 +25,7 @@ fn vs_main(
 	[[location(1)]] normal: vec3<f32>,
 ) -> VertexOutput {
 	var out: VertexOutput;
-	out.position = object.modelMatrix * vec4<f32>(position, 1.0);
+	out.position = camera.projectionMatrix * object.modelViewMatrix * vec4<f32>(position, 1.0);
 	out.normal = normal;
 	return out;
 }
@@ -27,7 +35,7 @@ struct Material {
 	color: vec3<f32>;
 };
 
-[[group(0), binding(1)]]
+[[group(0), binding(2)]]
 var<uniform> material: Material;
 
 [[stage(fragment)]]

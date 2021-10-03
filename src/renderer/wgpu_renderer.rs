@@ -102,6 +102,10 @@ impl WGPURenderer {
 	}
 
 	pub fn render(&mut self, scene: &Scene) {
+		if scene.borrow_active_camera().is_none() {
+			return;
+		}
+
 		for i in 0..scene.get_objects_num() {
 			let object = scene.borrow_object(i).unwrap();
 			if let Some(mesh) = scene.borrow_mesh(object.get_id()) {
@@ -123,6 +127,8 @@ impl WGPURenderer {
 					&self.device,
 					&self.queue,
 					object,
+					scene.borrow_active_camera().unwrap(),
+					scene.borrow_object(scene.get_active_camera_id().unwrap()).unwrap(),
 					mesh,
 				);
 			}
