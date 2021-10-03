@@ -11,6 +11,7 @@ use wgpu_rust_renderer::{
 		attribute::AttributeManager,
 		camera::PerspectiveCamera,
 		geometry::Geometry,
+		index::IndexManager,
 		mesh::Mesh,
 		scene::Scene,
 	}
@@ -19,31 +20,43 @@ use wgpu_rust_renderer::{
 fn create_scene(window: &Window) -> Scene {
 	let mut scene = Scene::new();
 	let mut attribute_manager = AttributeManager::new();
+	let mut index_manager = IndexManager::new();
 
 	let mut geometry = Geometry::new();
 
 	geometry.set_attribute("position", attribute_manager.create(
 		[
+			// top-left
 			-0.5, -0.5, 0.0,
+			// top-right
 			0.5, -0.5, 0.0,
+			// bottom-left
 			-0.5, 0.5, 0.0,
-			0.5, -0.5, 0.0,
+			// bottom-right
 			0.5, 0.5, 0.0,
-			-0.5, 0.5, 0.0,
 		].to_vec(),
 		3,
 	));
 
 	geometry.set_attribute("normal", attribute_manager.create(
 		[
+			// top-left
 			0.0, 0.0, 0.0,
+			// top-right
 			0.0, 0.0, 0.0,
+			// bottom-left
 			0.0, 0.0, 0.0,
-			0.0, 0.0, 0.0,
-			0.0, 0.0, 0.0,
+			// bottom-right
 			0.0, 0.0, 0.0,
 		].to_vec(),
 		3,
+	));
+
+	geometry.set_index(index_manager.create(
+		[
+			0, 1, 2,
+			1, 3, 2,
+		].to_vec()
 	));
 
 	let mut material = Material::new();
