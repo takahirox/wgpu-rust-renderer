@@ -236,8 +236,8 @@ impl Matrix4 {
 		m[15] = 0.0;
 
 		let nf = 1.0 / (near - far);
-		m[10] = (far + near) * nf;
-		m[14] = 2.0 * far * near * nf;
+		m[10] = far * nf;
+		m[14] = far * near * nf;
 
 		m
 	}
