@@ -63,9 +63,9 @@ fn create_scene() -> Scene {
 
 	geometry.set_attribute("normal", attribute_manager.create(
 		[
-			0.0, 0.0, 0.0,
-			0.0, 0.0, 0.0,
-			0.0, 0.0, 0.0,
+			0.0, 0.0, 1.0,
+			0.0, 0.0, 1.0,
+			0.0, 0.0, 1.0,
 		].to_vec(),
 		3,
 	));
