@@ -2,8 +2,6 @@
 
 use std::collections::HashMap;
 
-use wgpu::util::DeviceExt;
-
 use crate::scene::index::Index;
 
 pub struct WGPUIndices {
@@ -35,6 +33,7 @@ impl WGPUIndices {
 
 // @TODO: Remove duplication with wgpu_attributes.rs
 fn create_buffer(device: &wgpu::Device, contents: &[u8], usage: wgpu::BufferUsages) -> wgpu::Buffer {
+	use wgpu::util::DeviceExt;
 	device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
 		label: None,
 		contents:  contents,

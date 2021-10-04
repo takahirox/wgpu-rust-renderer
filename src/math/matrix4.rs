@@ -7,7 +7,7 @@ pub struct Matrix4 {
 impl Matrix4 {
 	pub fn create() -> Elements {
 		let mut elements = [0.0; ELEMENT_NUM];
-		Matrix4::identity(&mut elements);
+		Self::identity(&mut elements);
 		elements
 	}
 

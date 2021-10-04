@@ -1,5 +1,9 @@
 use crate::{
-	math::matrix4::Matrix4,
+	math::{
+		matrix3::Matrix3,
+		matrix3gpu::Matrix3GPU,
+		matrix4::Matrix4,
+	},
 	scene::{
 		camera::PerspectiveCamera,
 		mesh::Mesh,
@@ -65,7 +69,7 @@ impl WGPUBindings {
 	) {
 		if self.groups.len() == 0 {
 			let mut buffers = Vec::new();
-			buffers.push(create_buffer(device, 16 * 4)); // model-view matrix
+			buffers.push(create_buffer(device, (16 + 9) * 4)); // model-view matrix, normal matrix
 			buffers.push(create_buffer(device, 16 * 4)); // projection matrix
 			buffers.push(create_buffer(device, 3 * 4)); // color
 			let layout = create_layout(device);
@@ -73,16 +77,21 @@ impl WGPUBindings {
 			self.groups.push(WGPUBinding::new(layout, group, buffers));
 		}
 
-		// @TODO: Is this inefficient?
+		// @TODO: Is calculating them here inefficient?
 		let mut model_view_matrix = Matrix4::create();
 		let mut camera_matrix_inverse = Matrix4::create();
+		let mut normal_matrix = Matrix3::create();
+		let mut normal_matrix_gpu = Matrix3GPU::create();
 		Matrix4::copy(&mut camera_matrix_inverse, camera_object.borrow_matrix());
 		Matrix4::invert(&mut camera_matrix_inverse);
 		Matrix4::multiply(&mut model_view_matrix, &camera_matrix_inverse, object.borrow_matrix());
+		Matrix3::make_normal_from_matrix4(&mut normal_matrix, &model_view_matrix);
+		Matrix3GPU::copy_from_matrix3(&mut normal_matrix_gpu, &normal_matrix);
 
 		// @TODO: Should we calculate projection matrix * model-view matrix in CPU?
 		let binding = self.groups.last().unwrap();
 		queue.write_buffer(binding.borrow_buffer(0), 0, bytemuck::cast_slice(&model_view_matrix));
+		queue.write_buffer(binding.borrow_buffer(0), 64, bytemuck::cast_slice(&normal_matrix_gpu));
 		queue.write_buffer(binding.borrow_buffer(1), 0, bytemuck::cast_slice(camera.borrow_projection_matrix()));
 		queue.write_buffer(binding.borrow_buffer(2), 0, bytemuck::cast_slice(mesh.borrow_material().borrow_color()));
 	}
@@ -92,14 +101,15 @@ fn create_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
 	// @TODO: Should be programmable
 	device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
 		entries: &[
-			// model-view matrix
+			// model-view matrix, normal matrix
 			wgpu::BindGroupLayoutEntry {
 				binding: 0,
 				visibility: wgpu::ShaderStages::VERTEX,
 				ty: wgpu::BindingType::Buffer {
 					ty: wgpu::BufferBindingType::Uniform,
 					has_dynamic_offset: false,
-					min_binding_size: wgpu::BufferSize::new(64),
+					// mat3x3 requires 48 bytes, not 36 bytes
+					min_binding_size: wgpu::BufferSize::new(64 + 48),
 				},
 				count: None,
 			},
@@ -121,7 +131,7 @@ fn create_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
 				ty: wgpu::BindingType::Buffer {
 					ty: wgpu::BufferBindingType::Uniform,
 					has_dynamic_offset: false,
-					// color is 12 bytes but it seems to require eight-byte boundary?
+					// color is 12 bytes but it seems to require 16-byte boundary
 					min_binding_size: wgpu::BufferSize::new(16),
 				},
 				count: None,
@@ -149,7 +159,7 @@ fn create_group(
 	device.create_bind_group(&wgpu::BindGroupDescriptor {
 		layout: &layout,
 		entries: &[
-			// model-view matrix
+			// model-view matrix, normal matrix
 			wgpu::BindGroupEntry {
 				binding: 0,
 				resource: buffers[0].as_entire_binding(),

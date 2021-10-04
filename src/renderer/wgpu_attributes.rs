@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use wgpu::util::DeviceExt;
-
 use crate::scene::attribute::Attribute;
 
 pub struct WGPUAttributes {
@@ -32,6 +30,7 @@ impl WGPUAttributes {
 }
 
 fn create_buffer(device: &wgpu::Device, contents: &[u8], usage: wgpu::BufferUsages) -> wgpu::Buffer {
+	use wgpu::util::DeviceExt;
 	device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
 		label: None,
 		contents:  contents,

@@ -66,7 +66,13 @@ impl WGPURenderPipeline {
 				targets: &[swapchain_format.into()],
 			}),
 			primitive: wgpu::PrimitiveState::default(),
-			depth_stencil: None,
+			depth_stencil: Some(wgpu::DepthStencilState {
+				bias: wgpu::DepthBiasState::default(),
+				depth_compare: wgpu::CompareFunction::LessEqual,
+				depth_write_enabled: true,
+				format: wgpu::TextureFormat::Depth24PlusStencil8,
+				stencil: wgpu::StencilState::default(),
+			}),
 			multisample: wgpu::MultisampleState::default(),
 		});
 
