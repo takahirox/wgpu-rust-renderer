@@ -41,13 +41,13 @@ fn create_scene(window: &Window) -> Scene {
 	geometry.set_attribute("normal", attribute_manager.create(
 		[
 			// top-left
-			0.0, 0.0, 0.0,
+			0.0, 0.0, 1.0,
 			// top-right
-			0.0, 0.0, 0.0,
+			0.0, 0.0, 1.0,
 			// bottom-left
-			0.0, 0.0, 0.0,
+			0.0, 0.0, 1.0,
 			// bottom-right
-			0.0, 0.0, 0.0,
+			0.0, 0.0, 1.0,
 		].to_vec(),
 		3,
 	));
