@@ -43,7 +43,7 @@ impl WGPUWebRenderer {
 		update_canvas_size(
 			&self.canvas,
 			self.renderer.get_size(),
-			self.renderer.get_pixel_ratio()
+			self.renderer.get_pixel_ratio(),
 		);
 	}
 
@@ -63,7 +63,7 @@ impl WGPUWebRenderer {
 		update_canvas_size(
 			&self.canvas,
 			self.renderer.get_size(),
-			self.renderer.get_pixel_ratio()
+			self.renderer.get_pixel_ratio(),
 		);
 	}
 }
