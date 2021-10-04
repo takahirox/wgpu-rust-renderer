@@ -49,8 +49,16 @@ impl WGPUWebRenderer {
 
 	pub fn set_pixel_ratio(
 		&mut self,
-		pixel_ratio: f64,
+		_pixel_ratio: f64,
 	) {
+		// I don't know thy but pixel_ratio parameter needs to be 1.0 for Web.
+		// Otherwise, crashes with
+		//   Attachment size mismatch
+		//   - While encoding BeginRenderPass([RenderPassDescriptor]).
+		// error.
+		// @TODO: Fix the root issue
+		let pixel_ratio = 1.0;
+
 		WGPURenderer::set_pixel_ratio(&mut self.renderer, pixel_ratio);
 		update_canvas_size(
 			&self.canvas,
