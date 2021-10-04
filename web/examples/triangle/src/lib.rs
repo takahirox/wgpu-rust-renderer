@@ -9,8 +9,8 @@ use winit::{
 };
 
 use wgpu_rust_renderer::{
-	math::color::Color,
 	material::material::Material,
+	math::color::Color,
 	scene::{
 		camera::PerspectiveCamera,
 		attribute::AttributeManager,
