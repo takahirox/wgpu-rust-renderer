@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 
-use crate::scene::{
-	camera::PerspectiveCamera,
-	mesh::Mesh,
-	object::Object,
+use crate::{
+	scene::{
+		camera::PerspectiveCamera,
+		mesh::Mesh,
+		object::Object,
+	},
+	math::color::Color,
 };
 
 struct ComponentManager<T> {
@@ -64,6 +67,7 @@ impl<T> ComponentManager<T> {
 // @TODO: component_manager_map: HashMap<TypeID: ComponentManager<T>> ?
 pub struct Scene {
 	active_camera_id: Option<usize>,
+	background_color: [f32; 3],
 	objects: Vec<Object>,
 	camera_manager: ComponentManager<PerspectiveCamera>,
 	mesh_manager: ComponentManager<Mesh>,
@@ -73,6 +77,7 @@ impl Scene {
 	pub fn new() -> Self {
 		Scene {
 			active_camera_id: None,
+			background_color: *Color::set(&mut Color::create(), 1.0, 1.0, 1.0),
 			camera_manager: ComponentManager::<PerspectiveCamera>::new(),
 			mesh_manager: ComponentManager::<Mesh>::new(),
 			objects: Vec::new(),
@@ -118,6 +123,14 @@ impl Scene {
 
 	pub fn borrow_mesh_mut(&mut self, id: usize) -> Option<&mut Mesh> {
 		self.mesh_manager.borrow_mut(id)
+	}
+
+	pub fn borrow_background_color(&self) -> &[f32; 3] {
+		&self.background_color
+	}
+
+	pub fn borrow_background_color_mut(&mut self) -> &[f32; 3] {
+		&mut self.background_color
 	}
 
 	pub fn add_camera(&mut self, id: usize, camera: PerspectiveCamera) -> &mut Self {

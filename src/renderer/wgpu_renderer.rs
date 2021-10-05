@@ -156,6 +156,8 @@ impl WGPURenderer {
 
 		let depth_view = &self.depth_buffer.create_view(&wgpu::TextureViewDescriptor::default());
 
+		let background_color = scene.borrow_background_color();
+
 		let mut encoder = self.device.create_command_encoder(
 			&wgpu::CommandEncoderDescriptor {label: None});
 
@@ -164,7 +166,12 @@ impl WGPURenderer {
 				label: None,
 				color_attachments: &[wgpu::RenderPassColorAttachment {
 					ops: wgpu::Operations {
-						load: wgpu::LoadOp::Clear(wgpu::Color::WHITE),
+						load: wgpu::LoadOp::Clear(wgpu::Color {
+							r: background_color[0] as f64,
+							g: background_color[1] as f64,
+							b: background_color[2] as f64,
+							a: 1.0,
+						}),
 						store: true,
 					},
 					resolve_target: None,
