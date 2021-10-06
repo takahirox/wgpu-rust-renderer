@@ -5,6 +5,7 @@ use crate::renderer::{
 	wgpu_bindings::WGPUBindings,
 	wgpu_indices::WGPUIndices,
 	wgpu_render_pipeline::WGPURenderPipelines,
+	wgpu_textures::WGPUTextures,
 };
 use crate::scene::scene::Scene;
 
@@ -21,6 +22,7 @@ pub struct WGPURenderer {
 	render_pipelines: WGPURenderPipelines,
 	surface: wgpu::Surface,
 	surface_configuration: wgpu::SurfaceConfiguration,
+	textures: WGPUTextures,
 	width: f64
 }
 
@@ -78,6 +80,7 @@ impl WGPURenderer {
 			render_pipelines: WGPURenderPipelines::new(),
 			surface: surface,
 			surface_configuration: surface_configuration,
+			textures: WGPUTextures::new(),
 			width: width
 		}
 	}
@@ -122,10 +125,20 @@ impl WGPURenderer {
 				if let Some(attribute) = geometry.borrow_attribute("normal") {
 					self.attributes.update(&self.device, attribute);
 				}
+				if let Some(attribute) = geometry.borrow_attribute("uv") {
+					self.attributes.update(&self.device, attribute);
+				}
 
 				if let Some(indices) = geometry.borrow_index() {
 					self.indices.update(&self.device, indices);
 				}
+
+				let material = mesh.borrow_material();
+
+				// @TODO: Fix me
+				let texture = material.borrow_texture().unwrap();
+				self.textures.update(&self.device, &self.queue, texture);
+				let texture_gpu = self.textures.borrow(texture).unwrap();
 
 				self.bindings.update(
 					&self.device,
@@ -134,6 +147,7 @@ impl WGPURenderer {
 					scene.borrow_active_camera().unwrap(),
 					scene.borrow_object(scene.get_active_camera_id().unwrap()).unwrap(),
 					mesh,
+					texture_gpu,
 				);
 			}
 		}
@@ -203,6 +217,11 @@ impl WGPURenderer {
 					if let Some(normals) = geometry.borrow_attribute("normal") {
 						if let Some(buffer) = self.attributes.borrow(normals) {
 							pass.set_vertex_buffer(1, buffer.slice(..));
+						}
+					}
+					if let Some(uvs) = geometry.borrow_attribute("uv") {
+						if let Some(buffer) = self.attributes.borrow(uvs) {
+							pass.set_vertex_buffer(2, buffer.slice(..));
 						}
 					}
 

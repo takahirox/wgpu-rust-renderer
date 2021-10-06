@@ -50,6 +50,18 @@ impl WGPURenderPipeline {
 					},
 				],
 			},
+			// uv
+			wgpu::VertexBufferLayout {
+				array_stride: 2 * 4,
+				step_mode: wgpu::VertexStepMode::Vertex,
+				attributes: &[
+					wgpu::VertexAttribute {
+						format: wgpu::VertexFormat::Float32x2,
+						offset: 0,
+						shader_location: 2,
+					},
+				],
+			},
 		];
 
 		let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {

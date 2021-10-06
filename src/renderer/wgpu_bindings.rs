@@ -66,6 +66,7 @@ impl WGPUBindings {
 		camera: &PerspectiveCamera,
 		camera_object: &Object,
 		mesh: &Mesh,
+		texture: &wgpu::Texture,
 	) {
 		if self.groups.len() == 0 {
 			let mut buffers = Vec::new();
@@ -73,7 +74,8 @@ impl WGPUBindings {
 			buffers.push(create_buffer(device, 16 * 4)); // projection matrix
 			buffers.push(create_buffer(device, 3 * 4)); // color
 			let layout = create_layout(device);
-			let group = create_group(device, &layout, &buffers);
+			let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+			let group = create_group(device, &layout, &buffers, &texture_view);
 			self.groups.push(WGPUBinding::new(layout, group, buffers));
 		}
 
@@ -104,49 +106,53 @@ fn create_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
 			// model-view matrix, normal matrix
 			wgpu::BindGroupLayoutEntry {
 				binding: 0,
-				visibility: wgpu::ShaderStages::VERTEX,
+				count: None,
 				ty: wgpu::BindingType::Buffer {
 					ty: wgpu::BufferBindingType::Uniform,
 					has_dynamic_offset: false,
 					// mat3x3 requires 48 bytes, not 36 bytes
 					min_binding_size: wgpu::BufferSize::new(64 + 48),
 				},
-				count: None,
+				visibility: wgpu::ShaderStages::VERTEX,
 			},
 			// projection matrix
 			wgpu::BindGroupLayoutEntry {
 				binding: 1,
-				visibility: wgpu::ShaderStages::VERTEX,
+				count: None,
 				ty: wgpu::BindingType::Buffer {
 					ty: wgpu::BufferBindingType::Uniform,
 					has_dynamic_offset: false,
 					min_binding_size: wgpu::BufferSize::new(64),
 				},
-				count: None,
+				visibility: wgpu::ShaderStages::VERTEX,
 			},
 			// color
 			wgpu::BindGroupLayoutEntry {
 				binding: 2,
-				visibility: wgpu::ShaderStages::FRAGMENT,
+				count: None,
 				ty: wgpu::BindingType::Buffer {
 					ty: wgpu::BufferBindingType::Uniform,
 					has_dynamic_offset: false,
 					// color is 12 bytes but it seems to require 16-byte boundary
 					min_binding_size: wgpu::BufferSize::new(16),
 				},
+				visibility: wgpu::ShaderStages::FRAGMENT,
+			},
+			// color texture
+			wgpu::BindGroupLayoutEntry {
+				binding: 3,
 				count: None,
+				ty: wgpu::BindingType::Texture {
+					multisampled: false,
+					sample_type: wgpu::TextureSampleType::Float {
+						filterable: false,
+					},
+					view_dimension: wgpu::TextureViewDimension::D2,
+				},
+				visibility: wgpu::ShaderStages::FRAGMENT,
 			},
 		],
 		label: None,
-	})
-}
-
-fn create_buffer(device: &wgpu::Device, size_in_byte: usize) -> wgpu::Buffer {
-	use wgpu::util::DeviceExt;
-	device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-		label: None,
-		contents: bytemuck::cast_slice(&vec![0.0; size_in_byte / 4]),
-		usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 	})
 }
 
@@ -154,6 +160,7 @@ fn create_group(
 	device: &wgpu::Device,
 	layout: &wgpu::BindGroupLayout,
 	buffers: &Vec<wgpu::Buffer>,
+	texture_view: &wgpu::TextureView,
 ) -> wgpu::BindGroup {
 	// @TODO: Programmable
 	device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -174,7 +181,20 @@ fn create_group(
 				binding: 2,
 				resource: buffers[2].as_entire_binding(),
 			},
+			wgpu::BindGroupEntry {
+				binding: 3,
+				resource: wgpu::BindingResource::TextureView(&texture_view),
+			},
 		],
 		label: None,
+	})
+}
+
+fn create_buffer(device: &wgpu::Device, size_in_byte: usize) -> wgpu::Buffer {
+	use wgpu::util::DeviceExt;
+	device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+		label: None,
+		contents: bytemuck::cast_slice(&vec![0.0; size_in_byte / 4]),
+		usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 	})
 }
