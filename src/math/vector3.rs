@@ -16,6 +16,14 @@ impl Vector3 {
 		v
 	}
 
+
+	pub fn copy<'a>(v: &'a mut Elements, v2: &'a Elements) -> &'a mut Elements {
+		for i in 0..ELEMENT_NUM {
+			v[i] = v2[i];
+		}
+		v
+	}
+
 	pub fn add<'a>(v: &'a mut Elements, v2: &'a Elements) -> &'a mut Elements {
 		for i in 0..ELEMENT_NUM {
 			v[i] += v2[i];
@@ -27,6 +35,23 @@ impl Vector3 {
 		for i in 0..ELEMENT_NUM {
 			v[i] -= v2[i];
 		}
+		v
+	}
+
+	pub fn length(v: &Elements) -> f32 {
+		(v[0].powf(2.0) + v[1].powf(2.0) + v[2].powf(2.0)).sqrt()
+	}
+
+	pub fn normalize(v: &mut Elements) -> &mut Elements {
+		let length = Self::length(v);
+
+		// @TODO: Error handling?
+		if length != 0.0 {
+			for i in 0..ELEMENT_NUM {
+				v[i] /= length;
+			}
+		}
+
 		v
 	}
 }
