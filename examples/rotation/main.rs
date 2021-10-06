@@ -14,6 +14,7 @@ use wgpu_rust_renderer::{
 		index::IndexManager,
 		mesh::Mesh,
 		scene::Scene,
+		texture::TextureManager,
 	}
 };
 
@@ -21,6 +22,7 @@ fn create_scene(window: &Window) -> Scene {
 	let mut scene = Scene::new();
 	let mut attribute_manager = AttributeManager::new();
 	let mut index_manager = IndexManager::new();
+	let mut texture_manager = TextureManager::new();
 
 	let mut geometry = Geometry::new();
 
@@ -52,6 +54,20 @@ fn create_scene(window: &Window) -> Scene {
 		3,
 	));
 
+	geometry.set_attribute("uv", attribute_manager.create(
+		[
+			// top-left
+			0.0, 0.0,
+			// top-right
+			1.0, 0.0,
+			// bottom-left
+			0.0, 1.0,
+			// bottom-right
+			1.0, 1.0,
+		].to_vec(),
+		2,
+	));
+
 	geometry.set_index(index_manager.create(
 		[
 			0, 1, 2,
@@ -59,8 +75,10 @@ fn create_scene(window: &Window) -> Scene {
 		].to_vec()
 	));
 
+	let texture = texture_manager.create_dummy();
 	let mut material = Material::new();
 	Color::set(material.borrow_color_mut(), 0.0, 1.0, 0.0);
+	material.set_texture(Some(texture));
 
 	let mesh = Mesh::new(geometry, material);
 	let id = scene.create_object();
