@@ -160,9 +160,8 @@ impl WGPURenderer {
 		);
 
 		let frame = self.surface
-			.get_current_frame()
-			.expect("Failed to acquire next swap chain texture")
-			.output;
+			.get_current_texture()
+			.expect("Failed to acquire next swap chain texture");
 
 		let view = frame
 			.texture
@@ -243,6 +242,7 @@ impl WGPURenderer {
 		}
 
 		self.queue.submit(Some(encoder.finish()));
+		frame.present()
 	}
 
 	fn update_surface_configuration(&mut self) {
