@@ -10,12 +10,12 @@ use wgpu_rust_renderer::{
 	scene::{
 		attribute::AttributeManager,
 		camera::PerspectiveCamera,
-		geometry::Geometry,
 		index::IndexManager,
 		mesh::Mesh,
 		scene::Scene,
 		texture::TextureManager,
-	}
+	},
+	utils::geometry_helper::GeometryHelper,
 };
 
 fn create_scene(window: &Window) -> Scene {
@@ -24,42 +24,12 @@ fn create_scene(window: &Window) -> Scene {
 	let mut index_manager = IndexManager::new();
 	let mut texture_manager = TextureManager::new();
 
-	let mut geometry = Geometry::new();
-
-	let dx = 0.5;
-	let dy = 0.75_f32.sqrt() / 2.0;
-	geometry.set_attribute("position", attribute_manager.create(
-		[
-			0.5 - dx, 0.75_f32.sqrt() - dy, 0.0,
-			1.0 - dx, 0.0 - dy, 0.0,
-			0.0 - dx, 0.0 - dy, 0.0,
-		].to_vec(),
-		3,
-	));
-
-	geometry.set_attribute("normal", attribute_manager.create(
-		[
-			0.0, 0.0, 1.0,
-			0.0, 0.0, 1.0,
-			0.0, 0.0, 1.0,
-		].to_vec(),
-		3,
-	));
-
-	geometry.set_attribute("uv", attribute_manager.create(
-		[
-			0.5, 0.0,
-			1.0, 1.0,
-			0.0, 1.0,
-		].to_vec(),
-		2,
-	));
-
-	geometry.set_index(index_manager.create(
-		[
-			0, 1, 2,
-		].to_vec()
-	));
+	let geometry = GeometryHelper::create_triangle(
+		&mut attribute_manager,
+		&mut index_manager,
+		1.0,
+		1.0,
+	);
 
 	let texture = texture_manager.create_dummy();
 	let mut material = Material::new();

@@ -13,12 +13,12 @@ use wgpu_rust_renderer::{
 	scene::{
 		attribute::AttributeManager,
 		camera::PerspectiveCamera,
-		geometry::Geometry,
 		index::IndexManager,
 		mesh::Mesh,
 		scene::Scene,
 		texture::TextureManager,
-	}
+	},
+	utils::geometry_helper::GeometryHelper,
 };
 
 fn create_scene(window: &Window) -> Scene {
@@ -27,96 +27,13 @@ fn create_scene(window: &Window) -> Scene {
 	let mut index_manager = IndexManager::new();
     let mut texture_manager = TextureManager::new();
 
-	let mut geometry = Geometry::new();
-
-	geometry.set_attribute("position", attribute_manager.create(
-		[
-			// top-left-front
-			-0.5, -0.5, -0.5,
-			// top-right-front
-			0.5, -0.5, -0.5,
-			// bottom-left-front
-			-0.5, 0.5, -0.5,
-			// bottom-right-front
-			0.5, 0.5, -0.5,
-			// top-left-back
-			-0.5, -0.5, 0.5,
-			// top-right-back
-			0.5, -0.5, 0.5,
-			// bottom-left-back
-			-0.5, 0.5, 0.5,
-			// bottom-right-back
-			0.5, 0.5, 0.5,
-		].to_vec(),
-		3,
-	));
-
-	geometry.set_attribute("normal", attribute_manager.create(
-		[
-			// top-left-front
-			-0.5, -0.5, -0.5,
-			// top-right-front
-			0.5, -0.5, -0.5,
-			// bottom-left-front
-			-0.5, 0.5, -0.5,
-			// bottom-right-front
-			0.5, 0.5, -0.5,
-			// top-left-back
-			-0.5, -0.5, 0.5,
-			// top-right-back
-			0.5, -0.5, 0.5,
-			// bottom-left-back
-			-0.5, 0.5, 0.5,
-			// bottom-right-back
-			0.5, 0.5, 0.5,
-		].to_vec(),
-		3,
-	));
-
-	geometry.set_attribute("uv", attribute_manager.create(
-		[
-			// top-left-front
-			0.0, 0.0,
-			// top-right-front
-			1.0, 0.0,
-			// bottom-left-front
-			0.0, 1.0,
-			// bottom-right-front
-			1.0, 1.0,
-			// top-left-back
-			0.0, 0.0,
-			// top-right-back
-			0.0, 1.0,
-			// bottom-left-back
-			0.0, 1.0,
-			// bottom-right-back
-			1.0, 1.0,
-		].to_vec(),
-		2,
-	));
-
-	geometry.set_index(index_manager.create(
-		[
-			// front-face
-			0, 1, 2,
-			1, 3, 2,
-			// left-face
-			4, 0, 6,
-			0, 2, 6,
-			// right-face
-			1, 5, 3,
-			5, 7, 3,
-			// back-face
-			5, 4, 7,
-			4, 6, 7,
-			// top-face
-			4, 5, 0,
-			5, 1, 0,
-			// bottom-face
-			2, 3, 6,
-			3, 7, 6,
-		].to_vec()
-	));
+	let geometry = GeometryHelper::create_box(
+		&mut attribute_manager,
+		&mut index_manager,
+		1.0,
+		1.0,
+		1.0,
+	);
 
 	let texture = texture_manager.create_dummy();
 	let mut material = Material::new();
