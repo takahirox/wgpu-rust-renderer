@@ -14,11 +14,12 @@ use wgpu_rust_renderer::{
 	scene::{
 		camera::PerspectiveCamera,
 		attribute::AttributeManager,
-		geometry::Geometry,
 		index::IndexManager,
 		mesh::Mesh,
 		scene::Scene,
+		texture::TextureManager,
 	},
+	utils::geometry_helper::GeometryHelper,
 	web::wgpu_web_renderer::WGPUWebRenderer,
 };
 
@@ -47,46 +48,19 @@ fn create_scene() -> Scene {
 	let mut scene = Scene::new();
 	let mut attribute_manager = AttributeManager::new();
 	let mut index_manager = IndexManager::new();
+	let mut texture_manager = TextureManager::new();
 
-	let mut geometry = Geometry::new();
+	let geometry = GeometryHelper::create_plane(
+		&mut attribute_manager,
+		&mut index_manager,
+		1.0,
+		1.0,
+	);
 
-	geometry.set_attribute("position", attribute_manager.create(
-		[
-			// top-left
-			-0.5, -0.5, 0.0,
-			// top-right
-			0.5, -0.5, 0.0,
-			// bottom-left
-			-0.5, 0.5, 0.0,
-			// bottom-right
-			0.5, 0.5, 0.0,
-		].to_vec(),
-		3,
-	));
-
-	geometry.set_attribute("normal", attribute_manager.create(
-		[
-			// top-left
-			0.0, 0.0, 1.0,
-			// top-right
-			0.0, 0.0, 1.0,
-			// bottom-left
-			0.0, 0.0, 1.0,
-			// bottom-right
-			0.0, 0.0, 1.0,
-		].to_vec(),
-		3,
-	));
-
-	geometry.set_index(index_manager.create(
-		[
-			0, 1, 2,
-			1, 3, 2,
-		].to_vec()
-	));
-
+	let texture = texture_manager.create_dummy();
 	let mut material = Material::new();
 	Color::set(material.borrow_color_mut(), 0.0, 1.0, 0.0);
+	material.set_texture(Some(texture));
 
 	let mesh = Mesh::new(geometry, material);
 	let id = scene.create_object();

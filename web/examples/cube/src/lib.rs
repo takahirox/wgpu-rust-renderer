@@ -15,13 +15,14 @@ use wgpu_rust_renderer::{
 		vector3::Vector3,
 	},
 	scene::{
-		camera::PerspectiveCamera,
 		attribute::AttributeManager,
-		geometry::Geometry,
+		camera::PerspectiveCamera,
 		index::IndexManager,
 		mesh::Mesh,
 		scene::Scene,
+		texture::TextureManager,
 	},
+	utils::geometry_helper::GeometryHelper,
 	web::wgpu_web_renderer::WGPUWebRenderer,
 };
 
@@ -50,78 +51,20 @@ fn create_scene() -> Scene {
 	let mut scene = Scene::new();
 	let mut attribute_manager = AttributeManager::new();
 	let mut index_manager = IndexManager::new();
+    let mut texture_manager = TextureManager::new();
 
-	let mut geometry = Geometry::new();
+	let geometry = GeometryHelper::create_box(
+		&mut attribute_manager,
+		&mut index_manager,
+		1.0,
+		1.0,
+		1.0,
+	);
 
-	geometry.set_attribute("position", attribute_manager.create(
-		[
-			// top-left-front
-			-0.5, -0.5, -0.5,
-			// top-right-front
-			0.5, -0.5, -0.5,
-			// bottom-left-front
-			-0.5, 0.5, -0.5,
-			// bottom-right-front
-			0.5, 0.5, -0.5,
-			// top-left-back
-			-0.5, -0.5, 0.5,
-			// top-right-back
-			0.5, -0.5, 0.5,
-			// bottom-left-back
-			-0.5, 0.5, 0.5,
-			// bottom-right-back
-			0.5, 0.5, 0.5,
-		].to_vec(),
-		3,
-	));
-
-	geometry.set_attribute("normal", attribute_manager.create(
-		[
-			// top-left-front
-			-0.5, -0.5, -0.5,
-			// top-right-front
-			0.5, -0.5, -0.5,
-			// bottom-left-front
-			-0.5, 0.5, -0.5,
-			// bottom-right-front
-			0.5, 0.5, -0.5,
-			// top-left-back
-			-0.5, -0.5, 0.5,
-			// top-right-back
-			0.5, -0.5, 0.5,
-			// bottom-left-back
-			-0.5, 0.5, 0.5,
-			// bottom-right-back
-			0.5, 0.5, 0.5,
-		].to_vec(),
-		3,
-	));
-
-	geometry.set_index(index_manager.create(
-		[
-			// front-face
-			0, 1, 2,
-			1, 3, 2,
-			// left-face
-			4, 0, 6,
-			0, 2, 6,
-			// right-face
-			1, 5, 3,
-			5, 7, 3,
-			// back-face
-			5, 4, 7,
-			4, 6, 7,
-			// top-face
-			4, 5, 0,
-			5, 1, 0,
-			// bottom-face
-			2, 3, 6,
-			3, 7, 6,
-		].to_vec()
-	));
-
+	let texture = texture_manager.create_dummy();
 	let mut material = Material::new();
 	Color::set(material.borrow_color_mut(), 0.5, 0.5, 1.0);
+	material.set_texture(Some(texture));
 
 	let mesh = Mesh::new(geometry, material);
 	let id = scene.create_object();
