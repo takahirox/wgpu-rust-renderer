@@ -113,14 +113,14 @@ impl GeometryHelper {
 		let mut indices = Vec::new();
 
 		let mut position_vec = Vector3::create();
-		let mut normal_vec = Vector3::create();
 
 		// @TODO: Clean up
 		for face in 0..6 {
-			let (x, y, z, dx, dy, dz) = match face {
+			let (x, y, z, nx, ny, nz, dx, dy, dz) = match face {
 				// front
 				0 => (
 					-0.5, 0.5, 0.5,
+					0.0, 0.0, 1.0,
 					[0.0, 1.0, 0.0, 1.0],
 					[0.0, 0.0, -1.0, -1.0],
 					[0.0, 0.0, 0.0, 0.0],
@@ -128,6 +128,7 @@ impl GeometryHelper {
 				// right
 				1 => (
 					0.5, 0.5, 0.5,
+					1.0, 0.0, 0.0,
 					[0.0, 0.0, 0.0, 0.0],
 					[0.0, 0.0, -1.0, -1.0],
 					[0.0, -1.0, 0.0, -1.0],
@@ -135,6 +136,7 @@ impl GeometryHelper {
 				// back
 				2 => (
 					0.5, 0.5, -0.5,
+					0.0, 0.0, -1.0,
 					[0.0, -1.0, 0.0, -1.0],
 					[0.0, 0.0, -1.0, -1.0],
 					[0.0, 0.0, 0.0, 0.0],
@@ -142,6 +144,7 @@ impl GeometryHelper {
 				// left
 				3 => (
 					-0.5, 0.5, -0.5,
+					-1.0, 0.0, 0.0,
 					[0.0, 0.0, 0.0, 0.0],
 					[0.0, 0.0, -1.0, -1.0],
 					[0.0, 1.0, 0.0, 1.0],
@@ -149,6 +152,7 @@ impl GeometryHelper {
 				// top
 				4 => (
 					-0.5, 0.5, -0.5,
+					0.0, 1.0, 0.0,
 					[0.0, 1.0, 0.0, 1.0],
 					[0.0, 0.0, 0.0, 0.0],
 					[0.0, 0.0, 1.0, 1.0],
@@ -156,6 +160,7 @@ impl GeometryHelper {
 				// bottom
 				_ => (
 					-0.5, -0.5, 0.5,
+					0.0, -1.0, 0.0,
 					[0.0, 1.0, 0.0, 1.0],
 					[0.0, 0.0, 0.0, 0.0],
 					[0.0, 0.0, -1.0, -1.0],
@@ -167,13 +172,13 @@ impl GeometryHelper {
 				position_vec[1] = (y + dy[i]) * height;
 				position_vec[2] = (z + dz[i]) * depth;
 
-				Vector3::copy(&mut normal_vec, &position_vec);
-				Vector3::normalize(&mut normal_vec);
-
 				for j in 0..3 {
 					positions.push(position_vec[j]);
-					normals.push(normal_vec[j]);
 				}
+
+				normals.push(nx);
+				normals.push(ny);
+				normals.push(nz);
 			}
 
 			uvs.push(0.0);
