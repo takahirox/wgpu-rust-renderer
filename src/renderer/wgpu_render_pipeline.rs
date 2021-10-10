@@ -77,7 +77,13 @@ impl WGPURenderPipeline {
 				entry_point: "fs_main",
 				targets: &[swapchain_format.into()],
 			}),
-			primitive: wgpu::PrimitiveState::default(),
+			// Backface culling
+			// @TODO: Should be configurable 
+			primitive: wgpu::PrimitiveState {
+				cull_mode: Some(wgpu::Face::Back),
+				front_face: wgpu::FrontFace::Ccw,
+				..Default::default()
+			},
 			depth_stencil: Some(wgpu::DepthStencilState {
 				bias: wgpu::DepthBiasState::default(),
 				depth_compare: wgpu::CompareFunction::LessEqual,

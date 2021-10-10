@@ -20,8 +20,8 @@ impl GeometryHelper {
 		let dy = 0.75_f32.sqrt() / 2.0;
 		let positions = [
 			0.0, (0.75_f32.sqrt() - dy) * height, 0.0,
-			0.5 * width, -dy * height, 0.0,
 			-0.5 * width, -dy * height, 0.0,
+			0.5 * width, -dy * height, 0.0,
 		].to_vec();
 
 		let normals = [
@@ -56,13 +56,13 @@ impl GeometryHelper {
 	) -> Geometry {
 		let positions = [
 			// top-left
-			-0.5 * width, -0.5 * height, 0.0,
-			// top-right
-			0.5 * width, -0.5 * height, 0.0,
-			// bottom-left
 			-0.5 * width, 0.5 * height, 0.0,
-			// bottom-right
+			// top-right
 			0.5 * width, 0.5 * height, 0.0,
+			// bottom-left
+			-0.5 * width, -0.5 * height, 0.0,
+			// bottom-right
+			0.5 * width, -0.5 * height, 0.0,
 		].to_vec();
 
 		let normals = [
@@ -88,8 +88,8 @@ impl GeometryHelper {
 		].to_vec();
 
 		let indices = [
-			0, 1, 2,
-			1, 3, 2,
+			0, 2, 1,
+			1, 2, 3,
 		].to_vec();
 
 		let mut geometry = Geometry::new();
@@ -130,7 +130,7 @@ impl GeometryHelper {
 					0.5, 0.5, 0.5,
 					[0.0, 0.0, 0.0, 0.0],
 					[0.0, 0.0, -1.0, -1.0],
-					[-1.0, 0.0, -1.0, 0.0],
+					[0.0, -1.0, 0.0, -1.0],
 				),
 				// back
 				2 => (
@@ -144,7 +144,7 @@ impl GeometryHelper {
 					-0.5, 0.5, -0.5,
 					[0.0, 0.0, 0.0, 0.0],
 					[0.0, 0.0, -1.0, -1.0],
-					[1.0, 0.0, 1.0, 0.0],
+					[0.0, 1.0, 0.0, 1.0],
 				),
 				// top
 				4 => (
@@ -189,12 +189,12 @@ impl GeometryHelper {
 			uvs.push(1.0);
 
 			indices.push(face * 4 + 0);
-			indices.push(face * 4 + 1);
 			indices.push(face * 4 + 2);
+			indices.push(face * 4 + 1);
 
 			indices.push(face * 4 + 1);
-			indices.push(face * 4 + 3);
 			indices.push(face * 4 + 2);
+			indices.push(face * 4 + 3);
 		}
 
 		let mut geometry = Geometry::new();
