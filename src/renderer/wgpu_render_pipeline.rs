@@ -1,4 +1,6 @@
 use std::borrow::Cow;
+use std::collections::HashMap;
+use crate::scene::object::Object;
 
 pub struct WGPURenderPipeline {
 	pipeline: wgpu::RenderPipeline
@@ -101,29 +103,33 @@ impl WGPURenderPipeline {
 }
 
 pub struct WGPURenderPipelines {
-	pipelines: Vec<WGPURenderPipeline>
+	pipelines: HashMap::<usize, WGPURenderPipeline>
 }
 
 impl WGPURenderPipelines {
 	pub fn new() -> Self {
 		WGPURenderPipelines {
-			pipelines: vec![]
+			pipelines: HashMap::new()
 		}
 	}
 
-	pub fn borrow(
+	pub fn borrow(&self, object: &Object) -> &wgpu::RenderPipeline {
+		&self.pipelines.get(&object.get_id()).unwrap().pipeline
+	}
+
+	pub fn update(
 		&mut self,
 		device: &wgpu::Device,
 		adapter: &wgpu::Adapter,
 		surface: &wgpu::Surface,
+		object: &Object,
 		bind_group_layout: &wgpu::BindGroupLayout,
-	) -> &wgpu::RenderPipeline {
-		if self.pipelines.len() > 0 {
-			return &self.pipelines.last().unwrap().pipeline;
+	) {
+		if !self.pipelines.contains_key(&object.get_id()) {
+			self.pipelines.insert(
+				object.get_id(),
+				WGPURenderPipeline::new(device, adapter, surface, bind_group_layout)
+			);
 		}
-
-		self.pipelines.push(WGPURenderPipeline::new(device, adapter, surface, bind_group_layout));
-
-		&self.pipelines.last().unwrap().pipeline
 	}
 }

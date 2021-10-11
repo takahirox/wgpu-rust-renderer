@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::scene::texture::Texture;
 
 // @TODO: Fix me. We have a bad assumption that texture is always RGBA float 256x256
@@ -6,23 +7,23 @@ const HEIGHT: u32 = 256;
 const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
 
 pub struct WGPUTextures {
-	textures: Vec<wgpu::Texture>,
+	textures: HashMap<usize, wgpu::Texture>,
 }
 
 impl WGPUTextures {
 	pub fn new() -> WGPUTextures {
 		WGPUTextures {
-			textures: Vec::new(),
+			textures: HashMap::new(),
 		}
 	}
 
 	pub fn borrow(&self, texture: &Texture) -> Option<&wgpu::Texture> {
-		self.textures.get(texture.get_id())
+		self.textures.get(&texture.get_id())
 	}
 
 	// @TODO: Implement correctly
 	pub fn update(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, texture: &Texture) {
-		if self.textures.len() == 0 {
+		if !self.textures.contains_key(&texture.get_id()) {
 			let texture_gpu = create_texture(
 				device,
 				WIDTH,
@@ -36,7 +37,7 @@ impl WGPUTextures {
 				HEIGHT,
 				bytemuck::cast_slice(texture.borrow_texels()),
 			);
-			self.textures.push(texture_gpu);
+			self.textures.insert(texture.get_id(), texture_gpu);
 		}
 	}
 }

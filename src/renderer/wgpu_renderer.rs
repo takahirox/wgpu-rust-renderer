@@ -149,15 +149,17 @@ impl WGPURenderer {
 					mesh,
 					texture_gpu,
 				);
+
+				self.render_pipelines.update(
+					&self.device,
+					&self.adapter,
+					&self.surface,
+					object,
+					&self.bindings.borrow(object).unwrap().borrow_layout(),
+				);
+
 			}
 		}
-
-		let pipeline = self.render_pipelines.borrow(
-			&self.device,
-			&self.adapter,
-			&self.surface,
-			&self.bindings.borrow().borrow_layout(),
-		);
 
 		let frame = self.surface
 			.get_current_texture()
@@ -200,11 +202,13 @@ impl WGPURenderer {
 				}),
 			});
 
-			pass.set_pipeline(&pipeline);
-
 			for i in 0..scene.get_objects_num() {
 				let object = scene.borrow_object(i).unwrap();
 				if let Some(mesh) = scene.borrow_mesh(object.get_id()) {
+					let pipeline = self.render_pipelines.borrow(object);
+
+					pass.set_pipeline(&pipeline);
+
 					let geometry = mesh.borrow_geometry();
 
 					// @TODO: Should be programmable
@@ -224,7 +228,7 @@ impl WGPURenderer {
 						}
 					}
 
-					let binding = self.bindings.borrow();
+					let binding = self.bindings.borrow(object).unwrap();
 					pass.set_bind_group(0, &binding.borrow_group(), &[]);
 
 					if let Some(indices) = geometry.borrow_index() {
@@ -238,7 +242,6 @@ impl WGPURenderer {
 					}
 				}
 			}
-
 		}
 
 		self.queue.submit(Some(encoder.finish()));

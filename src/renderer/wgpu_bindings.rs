@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
 	math::{
 		matrix3::Matrix3,
@@ -44,19 +46,19 @@ impl WGPUBinding {
 }
 
 pub struct WGPUBindings {
-	groups: Vec<WGPUBinding>
+	groups: HashMap<usize, WGPUBinding>
 }
 
 // @TODO: Implement correctly
 impl WGPUBindings {
 	pub fn new() -> Self {
 		WGPUBindings {
-			groups: Vec::new()
+			groups: HashMap::new()
 		}
 	}
 
-	pub fn borrow(&self) -> &WGPUBinding {
-		&self.groups.last().unwrap()
+	pub fn borrow(&self, object: &Object) -> Option<&WGPUBinding> {
+		self.groups.get(&object.get_id())
 	}
 
 	pub fn update(&mut self,
@@ -68,7 +70,7 @@ impl WGPUBindings {
 		mesh: &Mesh,
 		texture: &wgpu::Texture,
 	) {
-		if self.groups.len() == 0 {
+		if !self.groups.contains_key(&object.get_id()) {
 			let mut buffers = Vec::new();
 			buffers.push(create_buffer(device, (16 + 9) * 4)); // model-view matrix, normal matrix
 			buffers.push(create_buffer(device, 16 * 4)); // projection matrix
@@ -76,7 +78,7 @@ impl WGPUBindings {
 			let layout = create_layout(device);
 			let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 			let group = create_group(device, &layout, &buffers, &texture_view);
-			self.groups.push(WGPUBinding::new(layout, group, buffers));
+			self.groups.insert(object.get_id(), WGPUBinding::new(layout, group, buffers));
 		}
 
 		// @TODO: Is calculating them here inefficient?
@@ -91,7 +93,7 @@ impl WGPUBindings {
 		Matrix3GPU::copy_from_matrix3(&mut normal_matrix_gpu, &normal_matrix);
 
 		// @TODO: Should we calculate projection matrix * model-view matrix in CPU?
-		let binding = self.groups.last().unwrap();
+		let binding = self.groups.get(&object.get_id()).unwrap();
 		queue.write_buffer(binding.borrow_buffer(0), 0, bytemuck::cast_slice(&model_view_matrix));
 		queue.write_buffer(binding.borrow_buffer(0), 64, bytemuck::cast_slice(&normal_matrix_gpu));
 		queue.write_buffer(binding.borrow_buffer(1), 0, bytemuck::cast_slice(camera.borrow_projection_matrix()));
