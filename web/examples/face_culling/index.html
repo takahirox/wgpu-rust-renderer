@@ -1,0 +1,25 @@
+<html>
+  <head>
+    <title>WebGPU Rust Renderer example - Face culling</title>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+    <style type="text/css">
+      body {
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      import init from './wgpu_rust_renderer_example_face_culling.js';
+
+      if (!document.createElement('canvas').getContext('webgpu')) {
+        const span = document.createElement('span');
+        span.innerText = 'Your browser does not seem to support WebGPU';
+        document.body.appendChild(span);
+      } else {
+        init().catch(console.error);
+      }
+    </script>
+  </body>
+</html>

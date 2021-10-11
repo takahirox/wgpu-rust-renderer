@@ -1,0 +1,33 @@
+[package]
+name = "wgpu_rust_renderer_example_face_culling"
+version = "0.1.0"
+authors = ["Takahiro <hogehoge@gachapin.jp>"]
+edition = "2018"
+resolver = "2"
+
+[lib]
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+console_error_panic_hook = "0.1.6"
+console_log = "0.1.2"
+js-sys = "0.3.55"
+wasm-bindgen = "0.2.78"
+wasm-bindgen-futures = "0.4.28"
+wgpu_rust_renderer = {path = "../../../"}
+
+[dependencies.web-sys]
+version = "0.3.55"
+features = [
+  "Document",
+  "Element",
+  "HtmlCanvasElement",
+  "Node",
+  "NodeList",
+  "Window",
+]
+
+[dependencies.winit]
+version = "0.25"
+features = ["web-sys"]
