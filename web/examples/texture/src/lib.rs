@@ -8,22 +8,24 @@ use winit::{
 };
 
 use wgpu_rust_renderer::{
+	geometry::{
+		attribute::AttributeManager,
+		index::IndexManager,
+	},
 	material::material::Material,
 	math::{
 		color::Color,
 		vector3::Vector3,
 	},
 	scene::{
-		attribute::AttributeManager,
 		camera::PerspectiveCamera,
-		index::IndexManager,
 		mesh::Mesh,
 		scene::Scene,
-		texture::{
-			Texture,
-			TextureFormat,
-			TextureManager,
-		},
+	},
+	texture::texture::{
+		Texture,
+		TextureFormat,
+		TextureManager,
 	},
 	utils::geometry_helper::GeometryHelper,
 	web::wgpu_web_renderer::WGPUWebRenderer,
