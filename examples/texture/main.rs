@@ -4,6 +4,10 @@ use winit::{
 	window::Window,
 };
 use wgpu_rust_renderer::{
+	geometry::{
+		attribute::AttributeManager,
+		index::IndexManager,
+	},
 	material::material::Material,
 	math::{
 		color::Color,
@@ -11,13 +15,11 @@ use wgpu_rust_renderer::{
 	},
 	renderer::wgpu_renderer::WGPURenderer,
 	scene::{
-		attribute::AttributeManager,
 		camera::PerspectiveCamera,
-		index::IndexManager,
 		mesh::Mesh,
 		scene::Scene,
-		texture::TextureManager,
 	},
+	texture::texture::TextureManager,
 	utils::{
 		geometry_helper::GeometryHelper,
 		texture_loader::TextureLoader,
