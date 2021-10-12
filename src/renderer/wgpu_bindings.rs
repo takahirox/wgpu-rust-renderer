@@ -9,7 +9,7 @@ use crate::{
 	scene::{
 		camera::PerspectiveCamera,
 		mesh::Mesh,
-		object::Object,
+		node::Node,
 	},
 };
 
@@ -57,20 +57,20 @@ impl WGPUBindings {
 		}
 	}
 
-	pub fn borrow(&self, object: &Object) -> Option<&WGPUBinding> {
-		self.groups.get(&object.get_id())
+	pub fn borrow(&self, node: &Node) -> Option<&WGPUBinding> {
+		self.groups.get(&node.get_id())
 	}
 
 	pub fn update(&mut self,
 		device: &wgpu::Device,
 		queue: &wgpu::Queue,
-		object: &Object,
+		node: &Node,
 		camera: &PerspectiveCamera,
-		camera_object: &Object,
+		camera_node: &Node,
 		mesh: &Mesh,
 		texture: &wgpu::Texture,
 	) {
-		if !self.groups.contains_key(&object.get_id()) {
+		if !self.groups.contains_key(&node.get_id()) {
 			let mut buffers = Vec::new();
 			buffers.push(create_buffer(device, (16 + 9) * 4)); // model-view matrix, normal matrix
 			buffers.push(create_buffer(device, 16 * 4)); // projection matrix
@@ -78,7 +78,7 @@ impl WGPUBindings {
 			let layout = create_layout(device);
 			let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 			let group = create_group(device, &layout, &buffers, &texture_view);
-			self.groups.insert(object.get_id(), WGPUBinding::new(layout, group, buffers));
+			self.groups.insert(node.get_id(), WGPUBinding::new(layout, group, buffers));
 		}
 
 		// @TODO: Is calculating them here inefficient?
@@ -86,14 +86,14 @@ impl WGPUBindings {
 		let mut camera_matrix_inverse = Matrix4::create();
 		let mut normal_matrix = Matrix3::create();
 		let mut normal_matrix_gpu = Matrix3GPU::create();
-		Matrix4::copy(&mut camera_matrix_inverse, camera_object.borrow_matrix());
+		Matrix4::copy(&mut camera_matrix_inverse, camera_node.borrow_matrix());
 		Matrix4::invert(&mut camera_matrix_inverse);
-		Matrix4::multiply(&mut model_view_matrix, &camera_matrix_inverse, object.borrow_matrix());
+		Matrix4::multiply(&mut model_view_matrix, &camera_matrix_inverse, node.borrow_matrix());
 		Matrix3::make_normal_from_matrix4(&mut normal_matrix, &model_view_matrix);
 		Matrix3GPU::copy_from_matrix3(&mut normal_matrix_gpu, &normal_matrix);
 
 		// @TODO: Should we calculate projection matrix * model-view matrix in CPU?
-		let binding = self.groups.get(&object.get_id()).unwrap();
+		let binding = self.groups.get(&node.get_id()).unwrap();
 		queue.write_buffer(binding.borrow_buffer(0), 0, bytemuck::cast_slice(&model_view_matrix));
 		queue.write_buffer(binding.borrow_buffer(0), 64, bytemuck::cast_slice(&normal_matrix_gpu));
 		queue.write_buffer(binding.borrow_buffer(1), 0, bytemuck::cast_slice(camera.borrow_projection_matrix()));

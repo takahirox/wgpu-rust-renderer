@@ -113,9 +113,9 @@ impl WGPURenderer {
 			return;
 		}
 
-		for i in 0..scene.get_objects_num() {
-			let object = scene.borrow_object(i).unwrap();
-			if let Some(mesh) = scene.borrow_mesh(object.get_id()) {
+		for i in 0..scene.get_nodes_num() {
+			let node = scene.borrow_node(i).unwrap();
+			if let Some(mesh) = scene.borrow_mesh(node.get_id()) {
 				let geometry = mesh.borrow_geometry();
 
 				// @TODO: Implement correctly
@@ -143,9 +143,9 @@ impl WGPURenderer {
 				self.bindings.update(
 					&self.device,
 					&self.queue,
-					object,
+					node,
 					scene.borrow_active_camera().unwrap(),
-					scene.borrow_object(scene.get_active_camera_id().unwrap()).unwrap(),
+					scene.borrow_node(scene.get_active_camera_id().unwrap()).unwrap(),
 					mesh,
 					texture_gpu,
 				);
@@ -154,8 +154,8 @@ impl WGPURenderer {
 					&self.device,
 					&self.adapter,
 					&self.surface,
-					object,
-					&self.bindings.borrow(object).unwrap().borrow_layout(),
+					node,
+					&self.bindings.borrow(node).unwrap().borrow_layout(),
 				);
 
 			}
@@ -202,10 +202,10 @@ impl WGPURenderer {
 				}),
 			});
 
-			for i in 0..scene.get_objects_num() {
-				let object = scene.borrow_object(i).unwrap();
-				if let Some(mesh) = scene.borrow_mesh(object.get_id()) {
-					let pipeline = self.render_pipelines.borrow(object);
+			for i in 0..scene.get_nodes_num() {
+				let node = scene.borrow_node(i).unwrap();
+				if let Some(mesh) = scene.borrow_mesh(node.get_id()) {
+					let pipeline = self.render_pipelines.borrow(node);
 
 					pass.set_pipeline(&pipeline);
 
@@ -228,7 +228,7 @@ impl WGPURenderer {
 						}
 					}
 
-					let binding = self.bindings.borrow(object).unwrap();
+					let binding = self.bindings.borrow(node).unwrap();
 					pass.set_bind_group(0, &binding.borrow_group(), &[]);
 
 					if let Some(indices) = geometry.borrow_index() {

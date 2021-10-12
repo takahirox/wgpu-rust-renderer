@@ -5,7 +5,7 @@ use crate::math::{
 	vector3::Vector3,
 };
 
-pub struct Object {
+pub struct Node {
 	children_ids: Vec<usize>,
 	id: usize,
 	matrix: [f32; 16],
@@ -16,9 +16,9 @@ pub struct Object {
 	scale: [f32; 3],
 }
 
-impl Object {
+impl Node {
 	pub fn new(id: usize) -> Self {
-		Object {
+		Node {
 			children_ids: Vec::new(),
 			id: id,
 			matrix: Matrix4::create(),

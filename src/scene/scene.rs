@@ -4,23 +4,23 @@ use crate::{
 	scene::{
 		camera::PerspectiveCamera,
 		mesh::Mesh,
-		object::Object,
+		node::Node,
 	},
 	math::color::Color,
 };
 
 struct ComponentManager<T> {
 	components: Vec<T>,
-	object_id_map: HashMap<usize, usize>, // object id -> index in components
-	object_ids: Vec<usize>, // object ids. Same order with components
+	node_id_map: HashMap<usize, usize>, // node id -> index in components
+	node_ids: Vec<usize>, // node ids. Same order with components
 }
 
 impl<T> ComponentManager<T> {
 	fn new() -> Self {
 		ComponentManager {
 			components: Vec::new(),
-			object_id_map: HashMap::new(),
-			object_ids: Vec::new(),
+			node_id_map: HashMap::new(),
+			node_ids: Vec::new(),
 		}
 	}
 
@@ -28,35 +28,35 @@ impl<T> ComponentManager<T> {
 		self.components.len() == 0
 	}
 
-	fn has(&self, object_id: usize) -> bool {
-		self.object_id_map.contains_key(&object_id)
+	fn has(&self, node_id: usize) -> bool {
+		self.node_id_map.contains_key(&node_id)
 	}
 
-	fn add(&mut self, object_id: usize, component: T) -> &mut Self {
-		if self.has(object_id) {
+	fn add(&mut self, node_id: usize, component: T) -> &mut Self {
+		if self.has(node_id) {
 			// @TODO: Error handling?
 			return self;
 		}
-		self.object_id_map.insert(object_id, self.components.len());
+		self.node_id_map.insert(node_id, self.components.len());
 		self.components.push(component);
-		self.object_ids.push(object_id);
+		self.node_ids.push(node_id);
 		self
 	}
 
-	fn borrow(&self, object_id: usize) -> Option<&T> {
-		match self.has(object_id) {
+	fn borrow(&self, node_id: usize) -> Option<&T> {
+		match self.has(node_id) {
 			true => {
-				let index = *self.object_id_map.get(&object_id).unwrap();
+				let index = *self.node_id_map.get(&node_id).unwrap();
 				Some(&self.components[index])
 			},
 			false => None,
 		}
 	}
 
-	fn borrow_mut(&mut self, object_id: usize) -> Option<&mut T> {
-		match self.has(object_id) {
+	fn borrow_mut(&mut self, node_id: usize) -> Option<&mut T> {
+		match self.has(node_id) {
 			true => {
-				let index = *self.object_id_map.get(&object_id).unwrap();
+				let index = *self.node_id_map.get(&node_id).unwrap();
 				Some(&mut self.components[index])
 			},
 			false => None,
@@ -68,7 +68,7 @@ impl<T> ComponentManager<T> {
 pub struct Scene {
 	active_camera_id: Option<usize>,
 	background_color: [f32; 3],
-	objects: Vec<Object>,
+	nodes: Vec<Node>,
 	camera_manager: ComponentManager<PerspectiveCamera>,
 	mesh_manager: ComponentManager<Mesh>,
 }
@@ -80,32 +80,32 @@ impl Scene {
 			background_color: *Color::set(&mut Color::create(), 1.0, 1.0, 1.0),
 			camera_manager: ComponentManager::<PerspectiveCamera>::new(),
 			mesh_manager: ComponentManager::<Mesh>::new(),
-			objects: Vec::new(),
+			nodes: Vec::new(),
 		}
 	}
 
-	pub fn create_object(&mut self) -> usize {
-		let object = Object::new(self.objects.len());
-		self.objects.push(object);
-		self.objects.len() - 1
+	pub fn create_node(&mut self) -> usize {
+		let node = Node::new(self.nodes.len());
+		self.nodes.push(node);
+		self.nodes.len() - 1
 	}
 
-	pub fn get_objects_num(&self) -> usize {
-		self.objects.len()
+	pub fn get_nodes_num(&self) -> usize {
+		self.nodes.len()
 	}
 
-	pub fn borrow_object(&self, id: usize) -> Option<&Object> {
-		if id >= self.objects.len() {
+	pub fn borrow_node(&self, id: usize) -> Option<&Node> {
+		if id >= self.nodes.len() {
 			return None;
 		}
-		Some(&self.objects[id])
+		Some(&self.nodes[id])
 	}
 
-	pub fn borrow_object_mut(&mut self, id: usize) -> Option<&mut Object> {
-		if id >= self.objects.len() {
+	pub fn borrow_node_mut(&mut self, id: usize) -> Option<&mut Node> {
+		if id >= self.nodes.len() {
 			return None;
 		}
-		Some(&mut self.objects[id])
+		Some(&mut self.nodes[id])
 	}
 
 	pub fn add_mesh(&mut self, id: usize, mesh: Mesh) -> &mut Self {
@@ -179,8 +179,8 @@ impl Scene {
 	}
 
 	pub fn update_matrices(&mut self) {
-		for object in self.objects.iter_mut() {
-			object.update_matrix();
+		for node in self.nodes.iter_mut() {
+			node.update_matrix();
 		}
 	}
 }
