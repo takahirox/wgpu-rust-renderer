@@ -67,7 +67,7 @@ fn create_scene() -> Scene {
 	material.set_texture(Some(texture));
 
 	let mesh = Mesh::new(geometry, material);
-	let id = scene.create_object();
+	let id = scene.create_node();
 	scene.add_mesh(id, mesh);
 
 	let window_size = get_window_inner_size();
@@ -77,12 +77,12 @@ fn create_scene() -> Scene {
 		0.1,
 		1000.0,
 	);
-	let id = scene.create_object();
+	let id = scene.create_node();
 	scene.add_camera(id, camera);
 	scene.set_active_camera_id(id);
 	Vector3::set(
 		scene
-			.borrow_object_mut(id)
+			.borrow_node_mut(id)
 			.unwrap()
 			.borrow_position_mut(),
 		0.0, 0.0, 3.0,
@@ -98,9 +98,9 @@ fn resize(renderer: &mut WGPUWebRenderer, scene: &mut Scene, width: u32, height:
 }
 
 fn animate(scene: &mut Scene) {
-	let object = scene.borrow_object_mut(0).unwrap();
+	let node = scene.borrow_node_mut(0).unwrap();
 	Vector3::add(
-		object.borrow_rotation_mut(),
+		node.borrow_rotation_mut(),
 		&[0.001, 0.01, 0.003],
 	);
 }
