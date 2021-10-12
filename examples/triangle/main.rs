@@ -37,7 +37,7 @@ fn create_scene(window: &Window) -> Scene {
 	material.set_texture(Some(texture));
 
 	let mesh = Mesh::new(geometry, material);
-	let id = scene.create_object();
+	let id = scene.create_node();
 	scene.add_mesh(id, mesh);
 
 	let window_size = window.inner_size();
@@ -47,12 +47,12 @@ fn create_scene(window: &Window) -> Scene {
 		0.1,
 		1000.0,
 	);
-	let id = scene.create_object();
+	let id = scene.create_node();
 	scene.add_camera(id, camera);
 	scene.set_active_camera_id(id);
 
 	scene
-		.borrow_object_mut(id)
+		.borrow_node_mut(id)
 		.unwrap()
 		.borrow_position_mut()[2] = 1.0;
 

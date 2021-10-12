@@ -39,11 +39,11 @@ fn create_scene(window: &Window) -> Scene {
 	material.set_texture(Some(texture));
 
 	let mesh = Mesh::new(geometry, material);
-	let id = scene.create_object();
+	let id = scene.create_node();
 	scene.add_mesh(id, mesh);
 
-	let object = scene.borrow_object_mut(id).unwrap();
-	object.borrow_position_mut()[0] = -0.5;
+	let node = scene.borrow_node_mut(id).unwrap();
+	node.borrow_position_mut()[0] = -0.5;
 
 	// @TODO: Should we make clone() method?
 	let geometry = GeometryHelper::create_plane(
@@ -59,12 +59,12 @@ fn create_scene(window: &Window) -> Scene {
 	material.set_texture(Some(texture));
 
 	let mesh = Mesh::new(geometry, material);
-	let id = scene.create_object();
+	let id = scene.create_node();
 	scene.add_mesh(id, mesh);
 
-	let object = scene.borrow_object_mut(id).unwrap();
-	object.borrow_position_mut()[0] = 0.5;
-	object.borrow_rotation_mut()[1] = 180.0_f32.to_radians();
+	let node = scene.borrow_node_mut(id).unwrap();
+	node.borrow_position_mut()[0] = 0.5;
+	node.borrow_rotation_mut()[1] = 180.0_f32.to_radians();
 
 	let window_size = window.inner_size();
 	let camera = PerspectiveCamera::new(
@@ -73,12 +73,12 @@ fn create_scene(window: &Window) -> Scene {
 		0.1,
 		1000.0,
 	);
-	let id = scene.create_object();
+	let id = scene.create_node();
 	scene.add_camera(id, camera);
 	scene.set_active_camera_id(id);
 
 	scene
-		.borrow_object_mut(id)
+		.borrow_node_mut(id)
 		.unwrap()
 		.borrow_position_mut()[2] = 2.0;
 
@@ -93,10 +93,10 @@ fn resize(renderer: &mut WGPURenderer, scene: &mut Scene, width: u32, height: u3
 
 fn animate(scene: &mut Scene) {
 	// @TODO: Remove magic numbers
-	let object = scene.borrow_object_mut(0).unwrap();
-	object.borrow_rotation_mut()[1] += 0.01;
-	let object = scene.borrow_object_mut(1).unwrap();
-	object.borrow_rotation_mut()[1] += 0.01;
+	let node = scene.borrow_node_mut(0).unwrap();
+	node.borrow_rotation_mut()[1] += 0.01;
+	let node = scene.borrow_node_mut(1).unwrap();
+	node.borrow_rotation_mut()[1] += 0.01;
 }
 
 fn render(renderer: &mut WGPURenderer, scene: &mut Scene) {
