@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::scene::{
+use crate::geometry::{
 	attribute::Attribute,
 	index::Index,
 };

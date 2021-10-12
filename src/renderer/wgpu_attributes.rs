@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::scene::attribute::Attribute;
+use crate::geometry::attribute::Attribute;
 
 pub struct WGPUAttributes {
 	attributes: HashMap<usize, wgpu::Buffer> // attribute id -> wgpu buffer

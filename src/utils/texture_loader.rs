@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use crate::scene::texture::{
+use crate::texture::texture::{
 	Texture,
 	TextureFormat,
 	TextureManager,

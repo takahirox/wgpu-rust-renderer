@@ -1,6 +1,6 @@
 use crate::{
 	math::color::Color,
-	scene::texture::Texture,
+	texture::texture::Texture,
 };
 
 pub struct Material {

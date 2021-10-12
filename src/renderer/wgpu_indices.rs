@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use crate::scene::index::Index;
+use crate::geometry::index::Index;
 
 pub struct WGPUIndices {
 	indices: HashMap<usize, wgpu::Buffer> // index attribute id -> wgpu buffer

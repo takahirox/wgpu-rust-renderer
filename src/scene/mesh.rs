@@ -1,5 +1,5 @@
 use crate::material::material::Material;
-use crate::scene::geometry::Geometry;
+use crate::geometry::geometry::Geometry;
 
 // @TODO: Support shared geometry and material
 pub struct Mesh {

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::scene::texture::Texture;
+use crate::texture::texture::Texture;
 
 // @TODO: Fix me. We have a bad assumption that texture is always RGBA float 256x256
 const WIDTH: u32 = 256;

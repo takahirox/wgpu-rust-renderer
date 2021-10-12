@@ -1,6 +1,6 @@
 use crate::{
 	math::vector3::Vector3,
-	scene::{
+	geometry::{
 		attribute::AttributeManager,
 		geometry::Geometry,
 		index::IndexManager,
