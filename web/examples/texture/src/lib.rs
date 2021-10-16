@@ -12,7 +12,6 @@ use wgpu_rust_renderer::{
 		attribute::AttributeManager,
 		index::IndexManager,
 	},
-	material::material::Material,
 	math::{
 		color::Color,
 		vector3::Vector3,
@@ -27,7 +26,10 @@ use wgpu_rust_renderer::{
 		TextureFormat,
 		TextureManager,
 	},
-	utils::geometry_helper::GeometryHelper,
+	utils::{
+		geometry_helper::GeometryHelper,
+		material_helper::MaterialHelper,
+	},
 	web::wgpu_web_renderer::WGPUWebRenderer,
 };
 
@@ -88,9 +90,10 @@ fn create_scene() -> Scene {
 	);
 
 	let texture = load_texture(&mut texture_manager);
-	let mut material = Material::new();
-	Color::set(material.borrow_color_mut(), 1.0, 1.0, 1.0);
-	material.set_texture(Some(texture));
+	let material = MaterialHelper::create_basic_material_with_texture(
+		Color::set(&mut Color::create(), 1.0, 1.0, 1.0),
+		texture,
+	);
 
 	let mesh = Mesh::new(geometry, material);
 	let id = scene.create_node();
