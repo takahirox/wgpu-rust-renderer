@@ -1,9 +1,8 @@
 use std::collections::HashMap;
+use crate::material::material::Material;
 use crate::texture::texture::Texture;
 
-// @TODO: Fix me. We have a bad assumption that texture is always RGBA float 256x256
-const WIDTH: u32 = 256;
-const HEIGHT: u32 = 256;
+// @TODO: Fix me.
 const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
 
 pub struct WGPUTextures {
@@ -22,22 +21,34 @@ impl WGPUTextures {
 	}
 
 	// @TODO: Implement correctly
-	pub fn update(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, texture: &Texture) {
+	fn update(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, texture: &Texture) {
 		if !self.textures.contains_key(&texture.get_id()) {
 			let texture_gpu = create_texture(
 				device,
-				WIDTH,
-				HEIGHT,
+				texture.get_width(),
+				texture.get_height(),
 				FORMAT,
 			);
 			upload_texture(
 				queue,
 				&texture_gpu,
-				WIDTH,
-				HEIGHT,
+				texture.get_width(),
+				texture.get_height(),
 				bytemuck::cast_slice(texture.borrow_texels()),
 			);
 			self.textures.insert(texture.get_id(), texture_gpu);
+		}
+	}
+
+	pub fn update_from_material(
+		&mut self,
+		device: &wgpu::Device,
+		queue: &wgpu::Queue,
+		material: &Material,
+	) {
+		let textures = material.borrow_textures();
+		for texture in textures.iter() {
+			self.update(device, queue, texture);
 		}
 	}
 }

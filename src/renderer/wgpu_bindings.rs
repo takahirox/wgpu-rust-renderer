@@ -1,6 +1,11 @@
 use std::collections::HashMap;
+use crate::renderer::wgpu_textures::WGPUTextures;
 
 use crate::{
+	material::{
+		material::Material,
+		node::UniformContents,
+	},
 	math::{
 		matrix3::Matrix3,
 		matrix3gpu::Matrix3GPU,
@@ -8,7 +13,6 @@ use crate::{
 	},
 	scene::{
 		camera::PerspectiveCamera,
-		mesh::Mesh,
 		node::Node,
 	},
 };
@@ -21,10 +25,21 @@ pub struct WGPUBinding {
 
 impl WGPUBinding {
 	fn new(
-		layout: wgpu::BindGroupLayout,
-		group: wgpu::BindGroup,
-		buffers: Vec<wgpu::Buffer>,
+		device: &wgpu::Device,
+		wgpu_textures: &WGPUTextures,
+		material: &Material,
 	) -> Self {
+		let layout = Self::build_layout(device, material);
+
+		let textures = material.borrow_textures();
+		let mut textures_gpu = Vec::new();
+		for texture in textures.iter() {
+			textures_gpu.push(wgpu_textures.borrow(texture).unwrap());
+		}
+
+		let buffers = Self::build_buffers(device, material);
+		let group = Self::build_group(device, &layout, &buffers, &textures_gpu);
+
 		WGPUBinding {
 			buffers: buffers,
 			group: group,
@@ -42,6 +57,181 @@ impl WGPUBinding {
 
 	pub fn borrow_buffer(&self, index: usize) -> &wgpu::Buffer {
 		&self.buffers[index]
+	}
+
+	pub fn update(
+		&self,
+		queue: &wgpu::Queue,
+		node: &Node,
+		camera: &PerspectiveCamera,
+		camera_node: &Node,
+		material: &Material,
+	) {
+		// @TODO: Is calculating them here inefficient?
+		let mut model_view_matrix = Matrix4::create();
+		let mut camera_matrix_inverse = Matrix4::create();
+		let mut normal_matrix = Matrix3::create();
+		let mut normal_matrix_gpu = Matrix3GPU::create();
+		Matrix4::copy(&mut camera_matrix_inverse, camera_node.borrow_matrix());
+		Matrix4::invert(&mut camera_matrix_inverse);
+		Matrix4::multiply(&mut model_view_matrix, &camera_matrix_inverse, node.borrow_matrix());
+		Matrix3::make_normal_from_matrix4(&mut normal_matrix, &model_view_matrix);
+		Matrix3GPU::copy_from_matrix3(&mut normal_matrix_gpu, &normal_matrix);
+
+		// binding 0 : Object (model-view matrix, normal matrix)
+		// binding 1 : Camera (projection matrix)
+		// binding 2 : Uniform buffers
+		// @TODO: Should we calculate projection matrix * model-view matrix in CPU?
+		queue.write_buffer(&self.buffers[0], 0, bytemuck::cast_slice(&model_view_matrix));
+		queue.write_buffer(&self.buffers[0], 64, bytemuck::cast_slice(&normal_matrix_gpu));
+		queue.write_buffer(&self.buffers[1], 0, bytemuck::cast_slice(camera.borrow_projection_matrix()));
+
+		let mut offset = 0;
+		for contents in material.borrow_contents().iter() {
+			match contents {
+				UniformContents::Vector3 {value} => {
+					queue.write_buffer(&self.buffers[2], offset, bytemuck::cast_slice(value));
+					offset += get_align(contents);
+				},
+				_ => {},
+			};
+		}
+	}
+
+	fn build_layout(
+		device: &wgpu::Device,
+		material: &Material
+	) -> wgpu::BindGroupLayout {
+		let mut entries = Vec::new();
+		let mut buffer_size = 0;
+
+		// binding 0 : Object (model-view matrix, normal matrix)
+		// binding 1 : Camera (projection matrix)
+		// binding 2 : Uniform buffers
+		// binding 3- : Textures
+
+		for contents in material.borrow_contents().iter() {
+			match contents {
+				UniformContents::Matrix4 {value: _} |
+				UniformContents::Vector3 {value: _} => {buffer_size += get_align(contents)},
+				UniformContents::Texture {value: _} => {
+					entries.push(wgpu::BindGroupLayoutEntry {
+						binding: entries.len() as u32 + 3,
+						count: None,
+						ty: wgpu::BindingType::Texture {
+							multisampled: false,
+							sample_type: wgpu::TextureSampleType::Float {
+								filterable: false,
+							},
+							view_dimension: wgpu::TextureViewDimension::D2,
+						},
+						// @TODO: Fix me
+						visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+					});
+				},
+			};
+		}
+
+		entries.push(wgpu::BindGroupLayoutEntry {
+			binding: 0,
+			count: None,
+			ty: wgpu::BindingType::Buffer {
+				ty: wgpu::BufferBindingType::Uniform,
+				has_dynamic_offset: false,
+				min_binding_size: wgpu::BufferSize::new((16 + 12) * 4),
+			},
+			visibility: wgpu::ShaderStages::VERTEX,
+		});
+
+		entries.push(wgpu::BindGroupLayoutEntry {
+			binding: 1,
+			count: None,
+			ty: wgpu::BindingType::Buffer {
+				ty: wgpu::BufferBindingType::Uniform,
+				has_dynamic_offset: false,
+				min_binding_size: wgpu::BufferSize::new(16 * 4),
+			},
+			visibility: wgpu::ShaderStages::VERTEX,
+		});
+
+		entries.push(wgpu::BindGroupLayoutEntry {
+			binding: 2,
+			count: None,
+			ty: wgpu::BindingType::Buffer {
+				ty: wgpu::BufferBindingType::Uniform,
+				has_dynamic_offset: false,
+				min_binding_size: wgpu::BufferSize::new(buffer_size),
+			},
+			// @TODO: Fix me
+			visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+		});
+
+		device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+			entries: &entries,
+			label: None,
+		})
+	}
+
+	fn build_group(
+		device: &wgpu::Device,
+		layout: &wgpu::BindGroupLayout,
+		buffers: &Vec<wgpu::Buffer>,
+		textures: &Vec<&wgpu::Texture>,
+	) -> wgpu::BindGroup {
+		let mut entries = Vec::new();
+
+		for buffer in buffers.iter() {
+			entries.push(wgpu::BindGroupEntry {
+				binding: entries.len() as u32,
+				resource: buffer.as_entire_binding(),
+			});
+		}
+
+		let mut texture_views = Vec::new();
+		for texture in textures.iter() {
+			texture_views.push(texture.create_view(&wgpu::TextureViewDescriptor::default()));
+		}
+
+		for texture_view in texture_views.iter() {
+			entries.push(wgpu::BindGroupEntry {
+				binding: entries.len() as u32,
+				resource: wgpu::BindingResource::TextureView(&texture_view),
+			});
+		}
+
+		device.create_bind_group(&wgpu::BindGroupDescriptor {
+			layout: &layout,
+			entries: &entries,
+			label: None,
+		})
+	}
+
+	fn build_buffers(
+		device: &wgpu::Device,
+		material: &Material,
+	) -> Vec<wgpu::Buffer> {
+		let mut buffers = Vec::new();
+
+		// binding 0 : Object (model-view matrix, normal matrix)
+		// binding 1 : Camera (projection matrix)
+		// binding 2 : Uniform buffers
+
+		buffers.push(create_buffer(device, (16 + 9) * 4));
+		buffers.push(create_buffer(device, 16 * 4));
+
+		let mut buffer_size = 0;
+		for contents in material.borrow_contents().iter() {
+			match contents {
+				UniformContents::Matrix4 {value: _} |
+				UniformContents::Vector3 {value: _} => {
+					buffer_size += get_byte(contents)
+				},
+				_ => {},
+			};
+		}
+
+		buffers.push(create_buffer(device, buffer_size as usize));
+		buffers
 	}
 }
 
@@ -64,132 +254,19 @@ impl WGPUBindings {
 	pub fn update(&mut self,
 		device: &wgpu::Device,
 		queue: &wgpu::Queue,
+		wgpu_textures: &WGPUTextures,
 		node: &Node,
 		camera: &PerspectiveCamera,
 		camera_node: &Node,
-		mesh: &Mesh,
-		texture: &wgpu::Texture,
+		material: &Material,
 	) {
 		if !self.groups.contains_key(&node.get_id()) {
-			let mut buffers = Vec::new();
-			buffers.push(create_buffer(device, (16 + 9) * 4)); // model-view matrix, normal matrix
-			buffers.push(create_buffer(device, 16 * 4)); // projection matrix
-			buffers.push(create_buffer(device, 3 * 4)); // color
-			let layout = create_layout(device);
-			let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-			let group = create_group(device, &layout, &buffers, &texture_view);
-			self.groups.insert(node.get_id(), WGPUBinding::new(layout, group, buffers));
+			self.groups.insert(node.get_id(), WGPUBinding::new(device, wgpu_textures, material));
 		}
 
-		// @TODO: Is calculating them here inefficient?
-		let mut model_view_matrix = Matrix4::create();
-		let mut camera_matrix_inverse = Matrix4::create();
-		let mut normal_matrix = Matrix3::create();
-		let mut normal_matrix_gpu = Matrix3GPU::create();
-		Matrix4::copy(&mut camera_matrix_inverse, camera_node.borrow_matrix());
-		Matrix4::invert(&mut camera_matrix_inverse);
-		Matrix4::multiply(&mut model_view_matrix, &camera_matrix_inverse, node.borrow_matrix());
-		Matrix3::make_normal_from_matrix4(&mut normal_matrix, &model_view_matrix);
-		Matrix3GPU::copy_from_matrix3(&mut normal_matrix_gpu, &normal_matrix);
-
-		// @TODO: Should we calculate projection matrix * model-view matrix in CPU?
 		let binding = self.groups.get(&node.get_id()).unwrap();
-		queue.write_buffer(binding.borrow_buffer(0), 0, bytemuck::cast_slice(&model_view_matrix));
-		queue.write_buffer(binding.borrow_buffer(0), 64, bytemuck::cast_slice(&normal_matrix_gpu));
-		queue.write_buffer(binding.borrow_buffer(1), 0, bytemuck::cast_slice(camera.borrow_projection_matrix()));
-		queue.write_buffer(binding.borrow_buffer(2), 0, bytemuck::cast_slice(mesh.borrow_material().borrow_color()));
+		binding.update(queue, node, camera, camera_node, material);
 	}
-}
-
-fn create_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-	// @TODO: Should be programmable
-	device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-		entries: &[
-			// model-view matrix, normal matrix
-			wgpu::BindGroupLayoutEntry {
-				binding: 0,
-				count: None,
-				ty: wgpu::BindingType::Buffer {
-					ty: wgpu::BufferBindingType::Uniform,
-					has_dynamic_offset: false,
-					// mat3x3 requires 48 bytes, not 36 bytes
-					min_binding_size: wgpu::BufferSize::new(64 + 48),
-				},
-				visibility: wgpu::ShaderStages::VERTEX,
-			},
-			// projection matrix
-			wgpu::BindGroupLayoutEntry {
-				binding: 1,
-				count: None,
-				ty: wgpu::BindingType::Buffer {
-					ty: wgpu::BufferBindingType::Uniform,
-					has_dynamic_offset: false,
-					min_binding_size: wgpu::BufferSize::new(64),
-				},
-				visibility: wgpu::ShaderStages::VERTEX,
-			},
-			// color
-			wgpu::BindGroupLayoutEntry {
-				binding: 2,
-				count: None,
-				ty: wgpu::BindingType::Buffer {
-					ty: wgpu::BufferBindingType::Uniform,
-					has_dynamic_offset: false,
-					// color is 12 bytes but it seems to require 16-byte boundary
-					min_binding_size: wgpu::BufferSize::new(16),
-				},
-				visibility: wgpu::ShaderStages::FRAGMENT,
-			},
-			// color texture
-			wgpu::BindGroupLayoutEntry {
-				binding: 3,
-				count: None,
-				ty: wgpu::BindingType::Texture {
-					multisampled: false,
-					sample_type: wgpu::TextureSampleType::Float {
-						filterable: false,
-					},
-					view_dimension: wgpu::TextureViewDimension::D2,
-				},
-				visibility: wgpu::ShaderStages::FRAGMENT,
-			},
-		],
-		label: None,
-	})
-}
-
-fn create_group(
-	device: &wgpu::Device,
-	layout: &wgpu::BindGroupLayout,
-	buffers: &Vec<wgpu::Buffer>,
-	texture_view: &wgpu::TextureView,
-) -> wgpu::BindGroup {
-	// @TODO: Programmable
-	device.create_bind_group(&wgpu::BindGroupDescriptor {
-		layout: &layout,
-		entries: &[
-			// model-view matrix, normal matrix
-			wgpu::BindGroupEntry {
-				binding: 0,
-				resource: buffers[0].as_entire_binding(),
-			},
-			// projection matrix
-			wgpu::BindGroupEntry {
-				binding: 1,
-				resource: buffers[1].as_entire_binding(),
-			},
-			// color
-			wgpu::BindGroupEntry {
-				binding: 2,
-				resource: buffers[2].as_entire_binding(),
-			},
-			wgpu::BindGroupEntry {
-				binding: 3,
-				resource: wgpu::BindingResource::TextureView(&texture_view),
-			},
-		],
-		label: None,
-	})
 }
 
 fn create_buffer(device: &wgpu::Device, size_in_byte: usize) -> wgpu::Buffer {
@@ -199,4 +276,18 @@ fn create_buffer(device: &wgpu::Device, size_in_byte: usize) -> wgpu::Buffer {
 		contents: bytemuck::cast_slice(&vec![0.0; size_in_byte / 4]),
 		usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 	})
+}
+
+fn get_byte(contents: &UniformContents) -> u64 {
+	match contents {
+		UniformContents::Vector3 {value: _} => 12,
+		_ => 0,
+	}
+}
+
+fn get_align(contents: &UniformContents) -> u64 {
+	match contents {
+		UniformContents::Vector3 {value: _} => 16,
+		_ => 0,
+	}
 }

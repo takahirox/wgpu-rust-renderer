@@ -16,7 +16,6 @@ impl Vector3 {
 		v
 	}
 
-
 	pub fn copy<'a>(v: &'a mut Elements, v2: &'a Elements) -> &'a mut Elements {
 		for i in 0..ELEMENT_NUM {
 			v[i] = v2[i];

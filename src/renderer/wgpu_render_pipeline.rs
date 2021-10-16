@@ -1,6 +1,9 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
-use crate::scene::node::Node;
+use crate::{
+	material::material::Material,
+	scene::node::Node,
+};
 
 pub struct WGPURenderPipeline {
 	pipeline: wgpu::RenderPipeline
@@ -12,10 +15,14 @@ impl WGPURenderPipeline {
 		adapter: &wgpu::Adapter,
 		surface: &wgpu::Surface,
 		bind_group_layout: &wgpu::BindGroupLayout,
+		shader_code: &str,
 	) -> Self {
+		// For debug
+		//println!("{}", shader_code);
+
 		let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
 			label: None,
-			source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("shader.wgsl"))),
+			source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(shader_code)),
 		});
 
 		let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -123,12 +130,19 @@ impl WGPURenderPipelines {
 		adapter: &wgpu::Adapter,
 		surface: &wgpu::Surface,
 		node: &Node,
+		material: &Material,
 		bind_group_layout: &wgpu::BindGroupLayout,
 	) {
 		if !self.pipelines.contains_key(&node.get_id()) {
 			self.pipelines.insert(
 				node.get_id(),
-				WGPURenderPipeline::new(device, adapter, surface, bind_group_layout)
+				WGPURenderPipeline::new(
+					device,
+					adapter,
+					surface,
+					bind_group_layout,
+					&material.build_shader_code(),
+				)
 			);
 		}
 	}

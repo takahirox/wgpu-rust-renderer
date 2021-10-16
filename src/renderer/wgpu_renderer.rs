@@ -134,20 +134,16 @@ impl WGPURenderer {
 				}
 
 				let material = mesh.borrow_material();
-
-				// @TODO: Fix me
-				let texture = material.borrow_texture().unwrap();
-				self.textures.update(&self.device, &self.queue, texture);
-				let texture_gpu = self.textures.borrow(texture).unwrap();
+				self.textures.update_from_material(&self.device, &self.queue, material);
 
 				self.bindings.update(
 					&self.device,
 					&self.queue,
+					&self.textures,
 					node,
 					scene.borrow_active_camera().unwrap(),
 					scene.borrow_node(scene.get_active_camera_id().unwrap()).unwrap(),
-					mesh,
-					texture_gpu,
+					material,
 				);
 
 				self.render_pipelines.update(
@@ -155,9 +151,9 @@ impl WGPURenderer {
 					&self.adapter,
 					&self.surface,
 					node,
+					material,
 					&self.bindings.borrow(node).unwrap().borrow_layout(),
 				);
-
 			}
 		}
 

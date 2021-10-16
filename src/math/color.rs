@@ -15,4 +15,11 @@ impl Color {
 		c[2] = b;
 		c
 	}
+
+	pub fn copy<'a>(c: &'a mut Elements, c2: &'a Elements) -> &'a mut Elements {
+		for i in 0..ELEMENT_NUM {
+			c[i] = c2[i];
+		}
+		c
+	}
 }
