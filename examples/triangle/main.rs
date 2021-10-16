@@ -8,7 +8,6 @@ use wgpu_rust_renderer::{
 		attribute::AttributeManager,
 		index::IndexManager,
 	},
-	material::material::Material,
 	math::color::Color,
 	renderer::wgpu_renderer::WGPURenderer,
 	scene::{
@@ -16,15 +15,16 @@ use wgpu_rust_renderer::{
 		mesh::Mesh,
 		scene::Scene,
 	},
-	texture::texture::TextureManager,
-	utils::geometry_helper::GeometryHelper,
+	utils::{
+		geometry_helper::GeometryHelper,
+		material_helper::MaterialHelper,
+	}
 };
 
 fn create_scene(window: &Window) -> Scene {
 	let mut scene = Scene::new();
 	let mut attribute_manager = AttributeManager::new();
 	let mut index_manager = IndexManager::new();
-	let mut texture_manager = TextureManager::new();
 
 	let geometry = GeometryHelper::create_triangle(
 		&mut attribute_manager,
@@ -33,10 +33,9 @@ fn create_scene(window: &Window) -> Scene {
 		1.0,
 	);
 
-	let texture = texture_manager.create_dummy();
-	let mut material = Material::new();
-	Color::set(material.borrow_color_mut(), 1.0, 0.0, 0.0);
-	material.set_texture(Some(texture));
+	let material = MaterialHelper::create_basic_material(
+		Color::set(&mut Color::create(), 1.0, 0.0, 0.0),
+	);
 
 	let mesh = Mesh::new(geometry, material);
 	let id = scene.create_node();
