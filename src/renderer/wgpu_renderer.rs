@@ -1,13 +1,30 @@
 use winit::window::Window;
 
-use crate::renderer::{
-	wgpu_attributes::WGPUAttributes,
-	wgpu_bindings::WGPUBindings,
-	wgpu_indices::WGPUIndices,
-	wgpu_render_pipeline::WGPURenderPipelines,
-	wgpu_textures::WGPUTextures,
+use crate::{
+	geometry::{
+		attribute::Attribute,
+		geometry::Geometry,
+		index::Index,
+	},
+	material::material::Material,
+	renderer::{
+		wgpu_attributes::WGPUAttributes,
+		wgpu_bindings::WGPUBindings,
+		wgpu_indices::WGPUIndices,
+		wgpu_render_pipeline::WGPURenderPipelines,
+		wgpu_textures::WGPUTextures,
+	},
+	resource::resource::{
+		ResourceId,
+		ResourcePools,
+	},
+	scene::{
+		camera::PerspectiveCamera,
+		mesh::Mesh,
+		node::Node,
+		scene::Scene,
+	},
 };
-use crate::scene::scene::Scene;
 
 pub struct WGPURenderer {
 	adapter: wgpu::Adapter,
@@ -108,53 +125,104 @@ impl WGPURenderer {
 		self.pixel_ratio
 	}
 
-	pub fn render(&mut self, scene: &Scene) {
-		if scene.borrow_active_camera().is_none() {
-			return;
-		}
+	pub fn render(
+		&mut self,
+		pools: &ResourcePools,
+		scene_rid: &ResourceId<Scene>,
+		camera_rid: &ResourceId<PerspectiveCamera>,
+	) {
+		let attribute_pool = pools.borrow::<Attribute>();
+		let geometry_pool = pools.borrow::<Geometry>();
+		let index_pool = pools.borrow::<Index>();
+		let mesh_pool = pools.borrow::<Mesh>();
+		let material_pool = pools.borrow::<Material>();
+		let node_pool = pools.borrow::<Node>();
+
+		// @TODO: Error handling
+
+		let scene = match pools.borrow::<Scene>().borrow(scene_rid) {
+			Some(scene) => scene,
+			None => return,
+		};
+
+		let camera = match pools.borrow::<PerspectiveCamera>().borrow(camera_rid) {
+			Some(camera) => camera,
+			None => return,
+		};
+
+		let camera_node = match scene.borrow_assigned_from::<PerspectiveCamera>(camera_rid) {
+			Some(rid) => match node_pool.borrow(rid) {
+				Some(node) => node,
+				None => return,
+			},
+			None => return,
+		};
 
 		for i in 0..scene.get_nodes_num() {
-			let node = scene.borrow_node(i).unwrap();
-			if let Some(mesh) = scene.borrow_mesh(node) {
-				let geometry = mesh.borrow_geometry();
+			let node_rid = match scene.borrow_node(i) {
+				Some(rid) => rid,
+				None => continue,
+			};
 
-				// @TODO: Implement correctly
-				if let Some(attribute) = geometry.borrow_attribute("position") {
-					self.attributes.update(&self.device, attribute);
-				}
-				if let Some(attribute) = geometry.borrow_attribute("normal") {
-					self.attributes.update(&self.device, attribute);
-				}
-				if let Some(attribute) = geometry.borrow_attribute("uv") {
-					self.attributes.update(&self.device, attribute);
-				}
+			let mesh = match scene.borrow_assigned_to::<Mesh>(node_rid) {
+				Some(rid) => match mesh_pool.borrow(rid) {
+					Some(mesh) => mesh,
+					None => continue,
+				},
+				None => continue,
+			};
 
-				if let Some(indices) = geometry.borrow_index() {
-					self.indices.update(&self.device, indices);
-				}
+			let geometry = match geometry_pool.borrow(mesh.borrow_geometry()) {
+				Some(geometry) => geometry,
+				None => continue,
+			};
 
-				let material = mesh.borrow_material();
-				self.textures.update_from_material(&self.device, &self.queue, material);
+			let material = match material_pool.borrow(mesh.borrow_material()) {
+				Some(material) => material,
+				None => continue,
+			};
 
-				self.bindings.update(
-					&self.device,
-					&self.queue,
-					&self.textures,
-					node,
-					scene.borrow_active_camera().unwrap(),
-					scene.borrow_node(scene.get_active_camera_id().unwrap()).unwrap(),
-					material,
-				);
-
-				self.render_pipelines.update(
-					&self.device,
-					&self.adapter,
-					&self.surface,
-					node,
-					material,
-					&self.bindings.borrow(node).unwrap().borrow_layout(),
-				);
+			// @TODO: Implement correctly
+			if let Some(rid) = geometry.borrow_attribute("position") {
+				self.attributes.update(&self.device, pools, rid);
 			}
+			if let Some(rid) = geometry.borrow_attribute("normal") {
+				self.attributes.update(&self.device, pools, rid);
+			}
+			if let Some(rid) = geometry.borrow_attribute("uv") {
+				self.attributes.update(&self.device, pools, rid);
+			}
+
+			if let Some(rid) = geometry.borrow_index() {
+				self.indices.update(&self.device, pools, rid);
+			}
+
+			self.textures.update_from_material(
+				&self.device,
+				&self.queue,
+				pools,
+				material,
+			);
+
+			self.bindings.update(
+				&self.device,
+				&self.queue,
+				&self.textures,
+				pools,
+				node_rid,
+				camera,
+				camera_node,
+				material,
+			);
+
+			self.render_pipelines.update(
+				&self.device,
+				&self.adapter,
+				&self.surface,
+				node_rid,
+				material,
+				&self.bindings.borrow(node_rid).unwrap().borrow_layout(),
+			);
 		}
 
 		let frame = self.surface
@@ -199,42 +267,59 @@ impl WGPURenderer {
 			});
 
 			for i in 0..scene.get_nodes_num() {
-				let node = scene.borrow_node(i).unwrap();
-				if let Some(mesh) = scene.borrow_mesh(node) {
-					let pipeline = self.render_pipelines.borrow(node);
+				let node_rid = match scene.borrow_node(i) {
+					Some(rid) => rid,
+					None => continue,
+				};
 
-					pass.set_pipeline(&pipeline);
+				let mesh = match scene.borrow_assigned_to::<Mesh>(node_rid) {
+					Some(rid) => match mesh_pool.borrow(rid) {
+						Some(mesh) => mesh,
+						None => continue,
+					},
+					None => continue,
+				};
 
-					let geometry = mesh.borrow_geometry();
+				let geometry = match geometry_pool.borrow(mesh.borrow_geometry()) {
+					Some(geometry) => geometry,
+					None => continue,
+				};
 
-					// @TODO: Should be programmable
-					if let Some(positions) = geometry.borrow_attribute("position") {
-						if let Some(buffer) = self.attributes.borrow(positions) {
-							pass.set_vertex_buffer(0, buffer.slice(..));
-						}
+				let pipeline = self.render_pipelines.borrow(node_rid);
+				pass.set_pipeline(&pipeline);
+
+				// @TODO: Should be programmable
+				if let Some(rid) = geometry.borrow_attribute("position") {
+					if let Some(buffer) = self.attributes.borrow(rid) {
+						pass.set_vertex_buffer(0, buffer.slice(..));
 					}
-					if let Some(normals) = geometry.borrow_attribute("normal") {
-						if let Some(buffer) = self.attributes.borrow(normals) {
-							pass.set_vertex_buffer(1, buffer.slice(..));
-						}
+				}
+				if let Some(rid) = geometry.borrow_attribute("normal") {
+					if let Some(buffer) = self.attributes.borrow(rid) {
+						pass.set_vertex_buffer(1, buffer.slice(..));
 					}
-					if let Some(uvs) = geometry.borrow_attribute("uv") {
-						if let Some(buffer) = self.attributes.borrow(uvs) {
-							pass.set_vertex_buffer(2, buffer.slice(..));
-						}
+				}
+				if let Some(rid) = geometry.borrow_attribute("uv") {
+					if let Some(buffer) = self.attributes.borrow(rid) {
+						pass.set_vertex_buffer(2, buffer.slice(..));
 					}
+				}
 
-					let binding = self.bindings.borrow(node).unwrap();
-					pass.set_bind_group(0, &binding.borrow_group(), &[]);
+				let binding = self.bindings.borrow(node_rid).unwrap();
+				pass.set_bind_group(0, &binding.borrow_group(), &[]);
 
-					if let Some(indices) = geometry.borrow_index() {
-						if let Some(buffer) = self.indices.borrow(indices) {
+				if let Some(rid) = geometry.borrow_index() {
+					if let Some(indices) = index_pool.borrow(rid) {
+						if let Some(buffer) = self.indices.borrow(rid) {
 							pass.set_index_buffer(buffer.slice(..), wgpu::IndexFormat::Uint16);
 							pass.draw_indexed(0..indices.get_count(), 0, 0..1);
 						}
-					} else {
-						let positions = geometry.borrow_attribute("position").unwrap();
-						pass.draw(0..positions.get_count(), 0..1);
+					}
+				} else {
+					if let Some(rid) = geometry.borrow_attribute("position") {
+						if let Some(positions) = attribute_pool.borrow(rid) {
+							pass.draw(0..positions.get_count(), 0..1);
+						}
 					}
 				}
 			}

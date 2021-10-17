@@ -1,12 +1,17 @@
 // @TODO: Should we reuse wgpu_attributes?
 
 use std::collections::HashMap;
-use uuid::Uuid;
 
-use crate::geometry::index::Index;
+use crate::{
+	geometry::index::Index,
+	resource::resource::{
+		ResourceId,
+		ResourcePools,
+	},
+};
 
 pub struct WGPUIndices {
-	indices: HashMap<Uuid, wgpu::Buffer> // index attribute id -> wgpu buffer
+	indices: HashMap<ResourceId<Index>, wgpu::Buffer>,
 }
 
 impl WGPUIndices {
@@ -16,18 +21,25 @@ impl WGPUIndices {
 		}
 	}
 
-	pub fn borrow(&self, index: &Index) -> Option<&wgpu::Buffer> {
-		self.indices.get(&index.get_id())
+	pub fn borrow(&self, index: &ResourceId<Index>) -> Option<&wgpu::Buffer> {
+		self.indices.get(index)
 	}
 
 	// @TODO: Implement correctly
-	pub fn update(&mut self, device: &wgpu::Device, index: &Index) {
-		if !self.indices.contains_key(&index.get_id()) {
-			self.indices.insert(index.get_id(), create_buffer(
-				device,
-				bytemuck::cast_slice(index.borrow_data()),
-				wgpu::BufferUsages::INDEX,
-			));
+	pub fn update(
+		&mut self,
+		device: &wgpu::Device,
+		pools: &ResourcePools,
+		index_rid: &ResourceId<Index>,
+	) {
+		if !self.indices.contains_key(index_rid) {
+			if let Some(index) = pools.borrow::<Index>().borrow(index_rid) {
+				self.indices.insert(*index_rid, create_buffer(
+					device,
+					bytemuck::cast_slice(index.borrow_data()),
+					wgpu::BufferUsages::INDEX,
+				));
+			}
 		}
 	}
 }

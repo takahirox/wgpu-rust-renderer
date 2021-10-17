@@ -1,6 +1,4 @@
 use std::collections::HashMap;
-use uuid::Uuid;
-use crate::renderer::wgpu_textures::WGPUTextures;
 
 use crate::{
 	material::{
@@ -11,6 +9,11 @@ use crate::{
 		matrix3::Matrix3,
 		matrix3gpu::Matrix3GPU,
 		matrix4::Matrix4,
+	},
+	renderer::wgpu_textures::WGPUTextures,
+	resource::resource::{
+		ResourceId,
+		ResourcePools,
 	},
 	scene::{
 		camera::PerspectiveCamera,
@@ -35,7 +38,9 @@ impl WGPUBinding {
 		let textures = material.borrow_textures();
 		let mut textures_gpu = Vec::new();
 		for texture in textures.iter() {
-			textures_gpu.push(wgpu_textures.borrow(texture).unwrap());
+			if let Some(texture) = wgpu_textures.borrow(texture) {
+				textures_gpu.push(texture);
+			}
 		}
 
 		let buffers = Self::build_buffers(device, material);
@@ -237,7 +242,7 @@ impl WGPUBinding {
 }
 
 pub struct WGPUBindings {
-	groups: HashMap<Uuid, WGPUBinding>
+	groups: HashMap<ResourceId<Node>, WGPUBinding>
 }
 
 // @TODO: Implement correctly
@@ -248,25 +253,28 @@ impl WGPUBindings {
 		}
 	}
 
-	pub fn borrow(&self, node: &Node) -> Option<&WGPUBinding> {
-		self.groups.get(&node.get_id())
+	pub fn borrow(&self, node: &ResourceId<Node>) -> Option<&WGPUBinding> {
+		self.groups.get(node)
 	}
 
 	pub fn update(&mut self,
 		device: &wgpu::Device,
 		queue: &wgpu::Queue,
 		wgpu_textures: &WGPUTextures,
-		node: &Node,
+		pools: &ResourcePools,
+		node_rid: &ResourceId<Node>,
 		camera: &PerspectiveCamera,
 		camera_node: &Node,
 		material: &Material,
 	) {
-		if !self.groups.contains_key(&node.get_id()) {
-			self.groups.insert(node.get_id(), WGPUBinding::new(device, wgpu_textures, material));
+		if !self.groups.contains_key(node_rid) {
+			self.groups.insert(*node_rid, WGPUBinding::new(device, wgpu_textures, material));
 		}
 
-		let binding = self.groups.get(&node.get_id()).unwrap();
-		binding.update(queue, node, camera, camera_node, material);
+		if let Some(node) = pools.borrow::<Node>().borrow(node_rid) {
+			let binding = self.groups.get(node_rid).unwrap();
+			binding.update(queue, node, camera, camera_node, material);
+		}
 	}
 }
 

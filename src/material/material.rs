@@ -3,6 +3,7 @@ use crate::{
 		MaterialNode,
 		UniformContents,
 	},
+	resource::resource::ResourceId,
 	texture::texture::Texture,
 };
 
@@ -99,7 +100,7 @@ impl Material {
 	}
 
 	// @TODO: Optimize?
-	pub fn borrow_textures(&self) -> Vec<&Texture> {
+	pub fn borrow_textures(&self) -> Vec<&ResourceId<Texture>> {
 		let mut textures = Vec::new();
 		for contents in self.borrow_contents().iter() {
 			match contents {

@@ -1,9 +1,9 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
-use uuid::Uuid;
 
 use crate::{
 	material::material::Material,
+	resource::resource::ResourceId,
 	scene::node::Node,
 };
 
@@ -112,7 +112,7 @@ impl WGPURenderPipeline {
 }
 
 pub struct WGPURenderPipelines {
-	pipelines: HashMap::<Uuid, WGPURenderPipeline>
+	pipelines: HashMap::<ResourceId<Node>, WGPURenderPipeline>
 }
 
 impl WGPURenderPipelines {
@@ -122,8 +122,8 @@ impl WGPURenderPipelines {
 		}
 	}
 
-	pub fn borrow(&self, node: &Node) -> &wgpu::RenderPipeline {
-		&self.pipelines.get(&node.get_id()).unwrap().pipeline
+	pub fn borrow(&self, node: &ResourceId<Node>) -> &wgpu::RenderPipeline {
+		&self.pipelines.get(node).unwrap().pipeline
 	}
 
 	pub fn update(
@@ -131,13 +131,13 @@ impl WGPURenderPipelines {
 		device: &wgpu::Device,
 		adapter: &wgpu::Adapter,
 		surface: &wgpu::Surface,
-		node: &Node,
+		node: &ResourceId<Node>,
 		material: &Material,
 		bind_group_layout: &wgpu::BindGroupLayout,
 	) {
-		if !self.pipelines.contains_key(&node.get_id()) {
+		if !self.pipelines.contains_key(&node) {
 			self.pipelines.insert(
-				node.get_id(),
+				*node,
 				WGPURenderPipeline::new(
 					device,
 					adapter,

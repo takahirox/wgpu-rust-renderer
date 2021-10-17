@@ -5,6 +5,10 @@ use crate::{
 		geometry::Geometry,
 		index::Index,
 	},
+	resource::resource::{
+		ResourceId,
+		ResourcePools,
+	},
 };
 
 pub struct GeometryHelper {
@@ -12,9 +16,10 @@ pub struct GeometryHelper {
 
 impl GeometryHelper {
 	pub fn create_triangle(
+		pools: &mut ResourcePools,
 		width: f32,
 		height: f32,
-	) -> Geometry {
+	) -> ResourceId<Geometry> {
 		let dy = 0.75_f32.sqrt() / 2.0;
 		let positions = [
 			0.0, (0.75_f32.sqrt() - dy) * height, 0.0,
@@ -39,17 +44,18 @@ impl GeometryHelper {
 		].to_vec();
 
 		let mut geometry = Geometry::new();
-		geometry.set_attribute("position", Attribute::new(positions, 3));
-		geometry.set_attribute("normal", Attribute::new(normals, 3));
-		geometry.set_attribute("uv", Attribute::new(uvs, 2));
-		geometry.set_index(Index::new(indices));
-		geometry
+		geometry.set_attribute("position", pools.borrow_mut::<Attribute>().add(Attribute::new(positions, 3)));
+		geometry.set_attribute("normal", pools.borrow_mut::<Attribute>().add(Attribute::new(normals, 3)));
+		geometry.set_attribute("uv", pools.borrow_mut::<Attribute>().add(Attribute::new(uvs, 2)));
+		geometry.set_index(pools.borrow_mut::<Index>().add(Index::new(indices)));
+		pools.borrow_mut::<Geometry>().add(geometry)
 	}
 
 	pub fn create_plane(
+		pools: &mut ResourcePools,
 		width: f32,
 		height: f32,
-	) -> Geometry {
+	) -> ResourceId<Geometry> {
 		let positions = [
 			// top-left
 			-0.5 * width, 0.5 * height, 0.0,
@@ -89,18 +95,19 @@ impl GeometryHelper {
 		].to_vec();
 
 		let mut geometry = Geometry::new();
-		geometry.set_attribute("position", Attribute::new(positions, 3));
-		geometry.set_attribute("normal", Attribute::new(normals, 3));
-		geometry.set_attribute("uv", Attribute::new(uvs, 2));
-		geometry.set_index(Index::new(indices));
-		geometry
+		geometry.set_attribute("position", pools.borrow_mut::<Attribute>().add(Attribute::new(positions, 3)));
+		geometry.set_attribute("normal", pools.borrow_mut::<Attribute>().add(Attribute::new(normals, 3)));
+		geometry.set_attribute("uv", pools.borrow_mut::<Attribute>().add(Attribute::new(uvs, 2)));
+		geometry.set_index(pools.borrow_mut::<Index>().add(Index::new(indices)));
+		pools.borrow_mut::<Geometry>().add(geometry)
 	}
 
 	pub fn create_box(
+		pools: &mut ResourcePools,
 		width: f32,
 		height: f32,
 		depth: f32,
-	) -> Geometry {
+	) -> ResourceId<Geometry> {
 		let mut positions = Vec::new();
 		let mut normals = Vec::new();
 		let mut uvs = Vec::new();
@@ -197,10 +204,10 @@ impl GeometryHelper {
 		}
 
 		let mut geometry = Geometry::new();
-		geometry.set_attribute("position", Attribute::new(positions, 3));
-		geometry.set_attribute("normal", Attribute::new(normals, 3));
-		geometry.set_attribute("uv", Attribute::new(uvs, 2));
-		geometry.set_index(Index::new(indices));
-		geometry
+		geometry.set_attribute("position", pools.borrow_mut::<Attribute>().add(Attribute::new(positions, 3)));
+		geometry.set_attribute("normal", pools.borrow_mut::<Attribute>().add(Attribute::new(normals, 3)));
+		geometry.set_attribute("uv", pools.borrow_mut::<Attribute>().add(Attribute::new(uvs, 2)));
+		geometry.set_index(pools.borrow_mut::<Index>().add(Index::new(indices)));
+		pools.borrow_mut::<Geometry>().add(geometry)
 	}
 }

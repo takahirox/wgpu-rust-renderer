@@ -8,6 +8,10 @@ use crate::{
 		},
 	},
 	math::color::Color,
+	resource::resource::{
+		ResourceId,
+		ResourcePools,
+	},
 	texture::texture::Texture,
 };
 
@@ -16,20 +20,22 @@ pub struct MaterialHelper {
 
 impl MaterialHelper {
 	pub fn create_basic_material(
+		pools: &mut ResourcePools,
 		color: &[f32; 3],
-	) -> Material {
+	) -> ResourceId<Material> {
 		let color_node = Box::new(Vector3Node::new(
 			"color",
 			*Color::copy(&mut Color::create(), color),
 		));
 
-		Material::new(color_node)
+		pools.borrow_mut::<Material>().add(Material::new(color_node))
 	}
 
 	pub fn create_basic_material_with_texture(
+		pools: &mut ResourcePools,
 		color: &[f32; 3],
-		texture: Texture
-	) -> Material {
+		texture: ResourceId<Texture>,
+	) -> ResourceId<Material> {
 		let color_node = Box::new(MultiplyNode::new(
 			Box::new(Vector3Node::new(
 				"color",
@@ -38,6 +44,6 @@ impl MaterialHelper {
 			Box::new(TextureRGBNode::new("color", texture)),
 		));
 
-		Material::new(color_node)
+		pools.borrow_mut::<Material>().add(Material::new(color_node))
 	}
 }

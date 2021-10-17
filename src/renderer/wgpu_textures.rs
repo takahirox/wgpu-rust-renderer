@@ -1,13 +1,18 @@
 use std::collections::HashMap;
-use uuid::Uuid;
-use crate::material::material::Material;
-use crate::texture::texture::Texture;
+use crate::{
+	material::material::Material,
+	resource::resource::{
+		ResourceId,
+		ResourcePools,
+	},
+	texture::texture::Texture,
+};
 
 // @TODO: Fix me.
 const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
 
 pub struct WGPUTextures {
-	textures: HashMap<Uuid, wgpu::Texture>,
+	textures: HashMap<ResourceId<Texture>, wgpu::Texture>,
 }
 
 impl WGPUTextures {
@@ -17,27 +22,35 @@ impl WGPUTextures {
 		}
 	}
 
-	pub fn borrow(&self, texture: &Texture) -> Option<&wgpu::Texture> {
-		self.textures.get(&texture.get_id())
+	pub fn borrow(&self, texture: &ResourceId<Texture>) -> Option<&wgpu::Texture> {
+		self.textures.get(texture)
 	}
 
 	// @TODO: Implement correctly
-	fn update(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, texture: &Texture) {
-		if !self.textures.contains_key(&texture.get_id()) {
-			let texture_gpu = create_texture(
-				device,
-				texture.get_width(),
-				texture.get_height(),
-				FORMAT,
-			);
-			upload_texture(
-				queue,
-				&texture_gpu,
-				texture.get_width(),
-				texture.get_height(),
-				bytemuck::cast_slice(texture.borrow_texels()),
-			);
-			self.textures.insert(texture.get_id(), texture_gpu);
+	fn update(
+		&mut self,
+		device: &wgpu::Device,
+		queue: &wgpu::Queue,
+		pools: &ResourcePools,
+		texture_rid: &ResourceId<Texture>,
+	) {
+		if !self.textures.contains_key(texture_rid) {
+			if let Some(texture) = pools.borrow::<Texture>().borrow(texture_rid) {
+				let texture_gpu = create_texture(
+					device,
+					texture.get_width(),
+					texture.get_height(),
+					FORMAT,
+				);
+				upload_texture(
+					queue,
+					&texture_gpu,
+					texture.get_width(),
+					texture.get_height(),
+					bytemuck::cast_slice(texture.borrow_texels()),
+				);
+				self.textures.insert(*texture_rid, texture_gpu);
+			}
 		}
 	}
 
@@ -45,11 +58,12 @@ impl WGPUTextures {
 		&mut self,
 		device: &wgpu::Device,
 		queue: &wgpu::Queue,
+		pools: &ResourcePools,
 		material: &Material,
 	) {
 		let textures = material.borrow_textures();
 		for texture in textures.iter() {
-			self.update(device, queue, texture);
+			self.update(device, queue, pools, texture);
 		}
 	}
 }

@@ -1,5 +1,3 @@
-use uuid::Uuid;
-
 // @TODO: Support more format
 pub enum TextureFormat {
 	Float,
@@ -10,7 +8,6 @@ pub enum TextureFormat {
 pub struct Texture {
 	format: TextureFormat,
 	height: u32,
-	id: Uuid,
 	texels: Vec<u8>, // @TODO: Support shared texels?
 	width: u32,
 }
@@ -25,14 +22,9 @@ impl Texture {
 		Texture {
 			format: format,
 			height: height,
-			id: Uuid::new_v4(),
 			texels: texels,
 			width: width,
 		}
-	}
-
-	pub fn get_id(&self) -> Uuid {
-		self.id
 	}
 
 	pub fn get_width(&self) -> u32 {

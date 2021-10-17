@@ -1,5 +1,3 @@
-use uuid::Uuid;
-
 use crate::math::{
 	euler::Euler,
 	matrix4::Matrix4,
@@ -9,7 +7,6 @@ use crate::math::{
 
 pub struct Node {
 	children_ids: Vec<usize>,
-	id: Uuid,
 	matrix: [f32; 16],
 	parent_id: Option<usize>, 
 	position: [f32; 3],
@@ -22,7 +19,6 @@ impl Node {
 	pub fn new() -> Self {
 		Node {
 			children_ids: Vec::new(),
-			id: Uuid::new_v4(),
 			matrix: Matrix4::create(),
 			parent_id: None,
 			position: Vector3::create(),
@@ -30,10 +26,6 @@ impl Node {
 			rotation: Euler::create(),
 			scale: *Vector3::set(&mut Vector3::create(), 1.0, 1.0, 1.0),
 		}
-	}
-
-	pub fn get_id(&self) -> Uuid {
-		self.id
 	}
 
 	pub fn get_parent_id(&self) -> Option<usize> {

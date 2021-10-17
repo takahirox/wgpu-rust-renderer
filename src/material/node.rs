@@ -1,9 +1,12 @@
-use crate::texture::texture::Texture;
+use crate::{
+	resource::resource::ResourceId,
+	texture::texture::Texture,
+};
 
 pub enum UniformContents {
 	Matrix4 {value: [f32; 16]},
 	Vector3 {value: [f32; 3]},
-	Texture {value: Texture},
+	Texture {value: ResourceId<Texture>},
 }
 
 pub trait MaterialNode {
@@ -58,7 +61,7 @@ pub struct TextureRGBNode {
 }
 
 impl TextureRGBNode {
-	pub fn new(label: &str, texture: Texture) -> Self {
+	pub fn new(label: &str, texture: ResourceId<Texture>) -> Self {
 		TextureRGBNode {
 			contents: UniformContents::Texture {
 				value: texture
