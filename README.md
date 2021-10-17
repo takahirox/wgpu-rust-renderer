@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/takahirox/wgpu_rust_renderer.svg?branch=main)](https://travis-ci.org/takahirox/wgpu_rust_renderer)
+[![Build Status](https://travis-ci.org/takahirox/wgpu-rust-renderer.svg?branch=main)](https://travis-ci.org/takahirox/wgpu-rust-renderer)
 [![Crate](https://img.shields.io/crates/v/wgpu_rust_renderer.svg)](https://crates.io/crates/wgpu_rust_renderer)
 
 # wgpu-rust-renderer
