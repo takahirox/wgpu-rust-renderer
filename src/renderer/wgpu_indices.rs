@@ -1,11 +1,12 @@
 // @TODO: Should we reuse wgpu_attributes?
 
 use std::collections::HashMap;
+use uuid::Uuid;
 
 use crate::geometry::index::Index;
 
 pub struct WGPUIndices {
-	indices: HashMap<usize, wgpu::Buffer> // index attribute id -> wgpu buffer
+	indices: HashMap<Uuid, wgpu::Buffer> // index attribute id -> wgpu buffer
 }
 
 impl WGPUIndices {

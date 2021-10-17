@@ -1,3 +1,5 @@
+use uuid::Uuid;
+
 // @TODO: Support more format
 pub enum TextureFormat {
 	Float,
@@ -8,14 +10,13 @@ pub enum TextureFormat {
 pub struct Texture {
 	format: TextureFormat,
 	height: u32,
-	id: usize,
+	id: Uuid,
 	texels: Vec<u8>, // @TODO: Support shared texels?
 	width: u32,
 }
 
 impl Texture {
-	fn new(
-		id: usize,
+	pub fn new(
 		width: u32,
 		height: u32,
 		format: TextureFormat,
@@ -24,13 +25,13 @@ impl Texture {
 		Texture {
 			format: format,
 			height: height,
-			id: id,
+			id: Uuid::new_v4(),
 			texels: texels,
 			width: width,
 		}
 	}
 
-	pub fn get_id(&self) -> usize {
+	pub fn get_id(&self) -> Uuid {
 		self.id
 	}
 
@@ -48,46 +49,5 @@ impl Texture {
 
 	pub fn borrow_texels(&self) -> &Vec<u8> {
 		&self.texels
-	}
-}
-
-// @TODO: Fix me.
-pub struct TextureManager {
-	count: usize
-}
-
-impl TextureManager {
-	pub fn new() -> Self {
-		TextureManager {
-			count: 0
-		}
-	}
-
-	pub fn create(
-		&mut self,
-		width: u32,	
-		height: u32,
-		format: TextureFormat,
-		texels: Vec<u8>, // @TODO: Support shared texels?
-	) -> Texture {
-		let texture = Texture::new(
-			self.count,
-			width,
-			height,
-			format,
-			texels,
-		);
-		self.count += 1;
-		texture
-	}
-
-	// @TODO: Remove this temporal method.
-	pub fn create_dummy(&mut self) -> Texture {
-		self.create(
-			256,
-			256,
-			TextureFormat::Uint8,
-			vec![255; 256 * 256 * 4],
-		)
 	}
 }

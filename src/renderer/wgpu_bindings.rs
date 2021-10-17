@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use uuid::Uuid;
 use crate::renderer::wgpu_textures::WGPUTextures;
 
 use crate::{
@@ -236,7 +237,7 @@ impl WGPUBinding {
 }
 
 pub struct WGPUBindings {
-	groups: HashMap<usize, WGPUBinding>
+	groups: HashMap<Uuid, WGPUBinding>
 }
 
 // @TODO: Implement correctly

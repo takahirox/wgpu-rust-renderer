@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
+use uuid::Uuid;
+
 use crate::{
 	material::material::Material,
 	scene::node::Node,
@@ -110,7 +112,7 @@ impl WGPURenderPipeline {
 }
 
 pub struct WGPURenderPipelines {
-	pipelines: HashMap::<usize, WGPURenderPipeline>
+	pipelines: HashMap::<Uuid, WGPURenderPipeline>
 }
 
 impl WGPURenderPipelines {

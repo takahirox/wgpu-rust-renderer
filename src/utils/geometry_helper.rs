@@ -1,9 +1,9 @@
 use crate::{
 	math::vector3::Vector3,
 	geometry::{
-		attribute::AttributeManager,
+		attribute::Attribute,
 		geometry::Geometry,
-		index::IndexManager,
+		index::Index,
 	},
 };
 
@@ -12,8 +12,6 @@ pub struct GeometryHelper {
 
 impl GeometryHelper {
 	pub fn create_triangle(
-		attribute_manager: &mut AttributeManager,
-		index_manager: &mut IndexManager,
 		width: f32,
 		height: f32,
 	) -> Geometry {
@@ -41,16 +39,14 @@ impl GeometryHelper {
 		].to_vec();
 
 		let mut geometry = Geometry::new();
-		geometry.set_attribute("position", attribute_manager.create(positions, 3));
-		geometry.set_attribute("normal", attribute_manager.create(normals, 3));
-		geometry.set_attribute("uv", attribute_manager.create(uvs, 2));
-		geometry.set_index(index_manager.create(indices));
+		geometry.set_attribute("position", Attribute::new(positions, 3));
+		geometry.set_attribute("normal", Attribute::new(normals, 3));
+		geometry.set_attribute("uv", Attribute::new(uvs, 2));
+		geometry.set_index(Index::new(indices));
 		geometry
 	}
 
 	pub fn create_plane(
-		attribute_manager: &mut AttributeManager,
-		index_manager: &mut IndexManager,
 		width: f32,
 		height: f32,
 	) -> Geometry {
@@ -93,16 +89,14 @@ impl GeometryHelper {
 		].to_vec();
 
 		let mut geometry = Geometry::new();
-		geometry.set_attribute("position", attribute_manager.create(positions, 3));
-		geometry.set_attribute("normal", attribute_manager.create(normals, 3));
-		geometry.set_attribute("uv", attribute_manager.create(uvs, 2));
-		geometry.set_index(index_manager.create(indices));
+		geometry.set_attribute("position", Attribute::new(positions, 3));
+		geometry.set_attribute("normal", Attribute::new(normals, 3));
+		geometry.set_attribute("uv", Attribute::new(uvs, 2));
+		geometry.set_index(Index::new(indices));
 		geometry
 	}
 
 	pub fn create_box(
-		attribute_manager: &mut AttributeManager,
-		index_manager: &mut IndexManager,
 		width: f32,
 		height: f32,
 		depth: f32,
@@ -203,10 +197,10 @@ impl GeometryHelper {
 		}
 
 		let mut geometry = Geometry::new();
-		geometry.set_attribute("position", attribute_manager.create(positions, 3));
-		geometry.set_attribute("normal", attribute_manager.create(normals, 3));
-		geometry.set_attribute("uv", attribute_manager.create(uvs, 2));
-		geometry.set_index(index_manager.create(indices));
+		geometry.set_attribute("position", Attribute::new(positions, 3));
+		geometry.set_attribute("normal", Attribute::new(normals, 3));
+		geometry.set_attribute("uv", Attribute::new(uvs, 2));
+		geometry.set_index(Index::new(indices));
 		geometry
 	}
 }

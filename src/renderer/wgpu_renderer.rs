@@ -115,7 +115,7 @@ impl WGPURenderer {
 
 		for i in 0..scene.get_nodes_num() {
 			let node = scene.borrow_node(i).unwrap();
-			if let Some(mesh) = scene.borrow_mesh(node.get_id()) {
+			if let Some(mesh) = scene.borrow_mesh(node) {
 				let geometry = mesh.borrow_geometry();
 
 				// @TODO: Implement correctly
@@ -200,7 +200,7 @@ impl WGPURenderer {
 
 			for i in 0..scene.get_nodes_num() {
 				let node = scene.borrow_node(i).unwrap();
-				if let Some(mesh) = scene.borrow_mesh(node.get_id()) {
+				if let Some(mesh) = scene.borrow_mesh(node) {
 					let pipeline = self.render_pipelines.borrow(node);
 
 					pass.set_pipeline(&pipeline);

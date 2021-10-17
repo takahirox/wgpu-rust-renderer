@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use uuid::Uuid;
 
 use crate::{
 	scene::{
@@ -69,6 +70,7 @@ pub struct Scene {
 	active_camera_id: Option<usize>,
 	background_color: [f32; 3],
 	nodes: Vec<Node>,
+	node_index_map: HashMap<Uuid, usize>, // node id -> index in nodes
 	camera_manager: ComponentManager<PerspectiveCamera>,
 	mesh_manager: ComponentManager<Mesh>,
 }
@@ -81,11 +83,13 @@ impl Scene {
 			camera_manager: ComponentManager::<PerspectiveCamera>::new(),
 			mesh_manager: ComponentManager::<Mesh>::new(),
 			nodes: Vec::new(),
+			node_index_map: HashMap::new(),
 		}
 	}
 
 	pub fn create_node(&mut self) -> usize {
-		let node = Node::new(self.nodes.len());
+		let node = Node::new();
+		self.node_index_map.insert(node.get_id(), self.nodes.len());
 		self.nodes.push(node);
 		self.nodes.len() - 1
 	}
@@ -117,8 +121,9 @@ impl Scene {
 		self
 	}
 
-	pub fn borrow_mesh(&self, id: usize) -> Option<&Mesh> {
-		self.mesh_manager.borrow(id)
+	pub fn borrow_mesh(&self, node: &Node) -> Option<&Mesh> {
+		let id = self.node_index_map.get(&node.get_id()).unwrap();
+		self.mesh_manager.borrow(*id)
 	}
 
 	pub fn borrow_mesh_mut(&mut self, id: usize) -> Option<&mut Mesh> {

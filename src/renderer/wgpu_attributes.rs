@@ -1,9 +1,10 @@
 use std::collections::HashMap;
+use uuid::Uuid;
 
 use crate::geometry::attribute::Attribute;
 
 pub struct WGPUAttributes {
-	attributes: HashMap<usize, wgpu::Buffer> // attribute id -> wgpu buffer
+	attributes: HashMap<Uuid, wgpu::Buffer> // attribute id -> wgpu buffer
 }
 
 impl WGPUAttributes {

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use uuid::Uuid;
 use crate::material::material::Material;
 use crate::texture::texture::Texture;
 
@@ -6,7 +7,7 @@ use crate::texture::texture::Texture;
 const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
 
 pub struct WGPUTextures {
-	textures: HashMap<usize, wgpu::Texture>,
+	textures: HashMap<Uuid, wgpu::Texture>,
 }
 
 impl WGPUTextures {
