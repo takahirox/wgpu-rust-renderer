@@ -8,10 +8,6 @@ use winit::{
 };
 
 use wgpu_rust_renderer::{
-	geometry::{
-		attribute::AttributeManager,
-		index::IndexManager,
-	},
 	math::{
 		color::Color,
 		vector3::Vector3,
@@ -24,7 +20,6 @@ use wgpu_rust_renderer::{
 	texture::texture::{
 		Texture,
 		TextureFormat,
-		TextureManager,
 	},
 	utils::{
 		geometry_helper::GeometryHelper,
@@ -54,7 +49,7 @@ fn get_window_device_pixel_ratio() -> f64 {
 	window.device_pixel_ratio()
 }
 
-fn load_texture(manager: &mut TextureManager) -> Texture {
+fn load_texture() -> Texture {
 	let data = include_bytes!(
 		concat!(
 			env!("CARGO_MANIFEST_DIR"),
@@ -67,7 +62,7 @@ fn load_texture(manager: &mut TextureManager) -> Texture {
 		image::ImageFormat::Png
 	).unwrap().to_rgba8().to_vec();
 
-	manager.create(
+	Texture::new(
 		256,
 		256,
 		TextureFormat::Uint8,
@@ -77,19 +72,14 @@ fn load_texture(manager: &mut TextureManager) -> Texture {
 
 fn create_scene() -> Scene {
 	let mut scene = Scene::new();
-	let mut attribute_manager = AttributeManager::new();
-	let mut index_manager = IndexManager::new();
-    let mut texture_manager = TextureManager::new();
 
 	let geometry = GeometryHelper::create_box(
-		&mut attribute_manager,
-		&mut index_manager,
 		1.0,
 		1.0,
 		1.0,
 	);
 
-	let texture = load_texture(&mut texture_manager);
+	let texture = load_texture();
 	let material = MaterialHelper::create_basic_material_with_texture(
 		Color::set(&mut Color::create(), 1.0, 1.0, 1.0),
 		texture,

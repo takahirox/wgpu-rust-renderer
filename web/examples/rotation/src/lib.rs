@@ -9,10 +9,6 @@ use winit::{
 };
 
 use wgpu_rust_renderer::{
-	geometry::{
-		attribute::AttributeManager,
-		index::IndexManager,
-	},
 	math::color::Color,
 	scene::{
 		camera::PerspectiveCamera,
@@ -49,12 +45,8 @@ fn get_window_device_pixel_ratio() -> f64 {
 
 fn create_scene() -> Scene {
 	let mut scene = Scene::new();
-	let mut attribute_manager = AttributeManager::new();
-	let mut index_manager = IndexManager::new();
 
 	let geometry = GeometryHelper::create_plane(
-		&mut attribute_manager,
-		&mut index_manager,
 		1.0,
 		1.0,
 	);
