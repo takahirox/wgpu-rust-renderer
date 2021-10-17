@@ -41,7 +41,6 @@ use winit::{
   window::Window,
 };
 use wgpu_rust_renderer::{
-  material::material::Material,
   math::color::Color,
   renderer::wgpu_renderer::WGPURenderer,
   scene::{
@@ -154,10 +153,11 @@ And add the following lines in your Rust code to import the library.
 use wgpu_rust_renderer::{
   material::material::Material,
   scene::{
-    attribute::AttributeManager,
+    attribute::Attribute,
     camera::PerspectiveCamera,
     geometry::Geometry,
-    index::IndexManager,
+    index::Index,
+    material::Material,
     mesh::Mesh,
     scene::Scene,
   },
