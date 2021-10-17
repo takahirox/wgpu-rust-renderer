@@ -151,13 +151,14 @@ And add the following lines in your Rust code to import the library.
 
 ```Rust
 use wgpu_rust_renderer::{
-  material::material::Material,
-  scene::{
+  geometry::{
     attribute::Attribute,
-    camera::PerspectiveCamera,
     geometry::Geometry,
     index::Index,
-    material::Material,
+  },
+  material::material::Material,
+  scene::{
+    camera::PerspectiveCamera,
     mesh::Mesh,
     scene::Scene,
   },
