@@ -4,10 +4,6 @@ use winit::{
 	window::Window,
 };
 use wgpu_rust_renderer::{
-	geometry::{
-		attribute::AttributeManager,
-		index::IndexManager,
-	},
 	math::{
 		color::Color,
 		vector3::Vector3,
@@ -18,7 +14,6 @@ use wgpu_rust_renderer::{
 		mesh::Mesh,
 		scene::Scene,
 	},
-	texture::texture::TextureManager,
 	utils::{
 		geometry_helper::GeometryHelper,
 		material_helper::MaterialHelper,
@@ -28,20 +23,14 @@ use wgpu_rust_renderer::{
 
 fn create_scene(window: &Window) -> Scene {
 	let mut scene = Scene::new();
-	let mut attribute_manager = AttributeManager::new();
-	let mut index_manager = IndexManager::new();
-    let mut texture_manager = TextureManager::new();
 
 	let geometry = GeometryHelper::create_box(
-		&mut attribute_manager,
-		&mut index_manager,
 		1.0,
 		1.0,
 		1.0,
 	);
 
 	let texture = TextureLoader::load_png(
-		&mut texture_manager,
 		concat!(
 			env!("CARGO_MANIFEST_DIR"),
 			"/examples/texture/texture.png",

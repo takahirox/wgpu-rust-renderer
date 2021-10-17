@@ -4,10 +4,6 @@ use winit::{
 	window::Window,
 };
 use wgpu_rust_renderer::{
-	geometry::{
-		attribute::AttributeManager,
-		index::IndexManager,
-	},
 	math::{
 		color::Color,
 		vector3::Vector3,
@@ -26,12 +22,8 @@ use wgpu_rust_renderer::{
 
 fn create_scene(window: &Window) -> Scene {
 	let mut scene = Scene::new();
-	let mut attribute_manager = AttributeManager::new();
-	let mut index_manager = IndexManager::new();
 
 	let geometry = GeometryHelper::create_box(
-		&mut attribute_manager,
-		&mut index_manager,
 		1.0,
 		1.0,
 		1.0,
