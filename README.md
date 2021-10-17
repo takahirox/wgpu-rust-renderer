@@ -45,33 +45,27 @@ use wgpu_rust_renderer::{
   math::color::Color,
   renderer::wgpu_renderer::WGPURenderer,
   scene::{
-    attribute::AttributeManager,
     camera::PerspectiveCamera,
-    index::IndexManager,
     mesh::Mesh,
     scene::Scene,
-    texture::TextureManager,
   },
-  utils::geometry_helper::GeometryHelper,
+  utils::{
+    geometry_helper::GeometryHelper,
+    material_helper::MaterialHelper,
+  },
 };
 
 fn create_scene(window: &Window) -> Scene {
   let mut scene = Scene::new();
-  let mut attribute_manager = AttributeManager::new();
-  let mut index_manager = IndexManager::new();
-  let mut texture_manager = TextureManager::new();
 
   let geometry = GeometryHelper::create_triangle(
-    &mut attribute_manager,
-    &mut index_manager,
     1.0,
     1.0,
   );
 
-  let texture = texture_manager.create_dummy();
-  let mut material = Material::new();
-  Color::set(material.borrow_color_mut(), 1.0, 0.0, 0.0);
-  material.set_texture(Some(texture));
+  let material = MaterialHelper::create_basic_material(
+    Color::set(&mut Color::create(), 1.0, 0.0, 0.0),
+  );
 
   let mesh = Mesh::new(geometry, material);
   let id = scene.create_object();
