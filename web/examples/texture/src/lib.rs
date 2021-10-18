@@ -12,9 +12,14 @@ use wgpu_rust_renderer::{
 		color::Color,
 		vector3::Vector3,
 	},
+	resource::resource::{
+		ResourceId,
+		ResourcePools,
+	},
 	scene::{
 		camera::PerspectiveCamera,
 		mesh::Mesh,
+		node::Node,
 		scene::Scene,
 	},
 	texture::texture::{
@@ -49,7 +54,7 @@ fn get_window_device_pixel_ratio() -> f64 {
 	window.device_pixel_ratio()
 }
 
-fn load_texture() -> Texture {
+fn load_texture(pools: &mut ResourcePools) -> ResourceId<Texture> {
 	let data = include_bytes!(
 		concat!(
 			env!("CARGO_MANIFEST_DIR"),
@@ -62,72 +67,108 @@ fn load_texture() -> Texture {
 		image::ImageFormat::Png
 	).unwrap().to_rgba8().to_vec();
 
-	Texture::new(
-		256,
-		256,
-		TextureFormat::Uint8,
-		data,
+	pools.borrow_mut::<Texture>().add(
+		Texture::new(
+			256,
+			256,
+			TextureFormat::Uint8,
+			data,
+		)
 	)
 }
 
-fn create_scene() -> Scene {
+fn create_scene(
+	pools: &mut ResourcePools
+) -> (ResourceId<Scene>, ResourceId<PerspectiveCamera>, Vec<ResourceId<Node>>) {
+	let mut objects = Vec::new();
 	let mut scene = Scene::new();
 
 	let geometry = GeometryHelper::create_box(
+		pools,
 		1.0,
 		1.0,
 		1.0,
 	);
 
-	let texture = load_texture();
+	let texture = load_texture(pools);
 	let material = MaterialHelper::create_basic_material_with_texture(
+		pools,
 		Color::set(&mut Color::create(), 1.0, 1.0, 1.0),
 		texture,
 	);
 
-	let mesh = Mesh::new(geometry, material);
-	let id = scene.create_node();
-	scene.add_mesh(id, mesh);
-	scene.borrow_node_mut(id).unwrap().borrow_rotation_mut()[0] = 35.0_f32.to_radians();
+	let mesh = pools.borrow_mut::<Mesh>().add(Mesh::new(geometry, material));
+	let mut node = Node::new();
+	node.borrow_rotation_mut()[0] = 35.0_f32.to_radians();
+	let node = pools.borrow_mut::<Node>().add(node);
+	scene.add_node(&node);
+	scene.assign(&node, &mesh);
+	objects.push(node);
 
 	let window_size = get_window_inner_size();
-	let camera = PerspectiveCamera::new(
-		60.0_f32.to_radians(),
-		window_size.0 as f32 / window_size.1 as f32,
-		0.1,
-		1000.0,
+	let camera = pools.borrow_mut::<PerspectiveCamera>().add(
+		PerspectiveCamera::new(
+			60.0_f32.to_radians(),
+			(window_size.0 / window_size.1) as f32,
+			0.1,
+			1000.0,
+		),
 	);
-	let id = scene.create_node();
-	scene.add_camera(id, camera);
-	scene.set_active_camera_id(id);
+
+	let mut node = Node::new();
 	Vector3::set(
-		scene
-			.borrow_node_mut(id)
-			.unwrap()
-			.borrow_position_mut(),
+		node.borrow_position_mut(),
 		0.0, 0.0, 3.0,
 	);
 
-	scene
+	let node = pools.borrow_mut::<Node>().add(node);
+	scene.add_node(&node);
+	scene.assign(&node, &camera);
+
+	(pools.borrow_mut::<Scene>().add(scene), camera, objects)
 }
 
-fn resize(renderer: &mut WGPUWebRenderer, scene: &mut Scene, width: u32, height: u32) {
-	scene.borrow_active_camera_mut().unwrap().set_aspect(width as f32 / height as f32);
+fn resize(
+	renderer: &mut WGPUWebRenderer,
+	pools: &mut ResourcePools,
+	camera: &ResourceId<PerspectiveCamera>,
+	width: u32,
+	height: u32,
+) {
+	pools
+		.borrow_mut::<PerspectiveCamera>()
+		.borrow_mut(camera)
+		.unwrap()
+		.set_aspect(width as f32 / height as f32);
 	renderer.set_size(width as f64, height as f64);
-	render(renderer, scene);
 }
 
-fn animate(scene: &mut Scene) {
-	let node = scene.borrow_node_mut(0).unwrap();
-	Vector3::add(
-		node.borrow_rotation_mut(),
-		&[0.0, 0.01, 0.0],
-	);
+fn update(
+	pools: &mut ResourcePools,
+	scene: &ResourceId<Scene>,
+	objects: &Vec<ResourceId<Node>>,
+) {
+	{
+		let node = pools.borrow_mut::<Node>().borrow_mut(&objects[0]).unwrap();
+		Vector3::add(
+			node.borrow_rotation_mut(),
+			&[0.0, 0.01, 0.0],
+		);
+	}
+
+	pools.borrow::<Scene>()
+		.borrow(scene)
+		.unwrap()
+		.update_matrices(pools);
 }
 
-fn render(renderer: &mut WGPUWebRenderer, scene: &mut Scene) {
-	scene.update_matrices();
-	renderer.render(scene);
+fn render(
+	renderer: &mut WGPUWebRenderer,
+	pools: &ResourcePools,
+	scene: &ResourceId<Scene>,
+	camera: &ResourceId<PerspectiveCamera>,
+) {
+	renderer.render(pools, scene, camera);
 }
 
 fn create_window(event_loop: &EventLoop<()>) -> std::rc::Rc<winit::window::Window> {
@@ -179,7 +220,8 @@ pub async fn start() {
 	renderer.set_size(inner_size.0 as f64, inner_size.1 as f64);
 	renderer.set_pixel_ratio(pixel_ratio as f64);
 
-	let mut scene = create_scene();
+	let mut pools = ResourcePools::new();
+	let (scene, camera, objects) = create_scene(&mut pools);
 
 	event_loop.run(move |event, _, control_flow| {
 		*control_flow = ControlFlow::Poll;
@@ -188,14 +230,16 @@ pub async fn start() {
 				event: WindowEvent::Resized(size),
 				..
 			} => {
-				resize(&mut renderer, &mut scene, size.width, size.height);
+				resize(&mut renderer, &mut pools, &camera, size.width, size.height);
+				update(&mut pools, &scene, &objects);
+				render(&mut renderer, &mut pools, &scene, &camera);
 			},
 			Event::RedrawEventsCleared => {
                 window.request_redraw();
             },
 			Event::RedrawRequested(_) => {
-				animate(&mut scene);
-				render(&mut renderer, &mut scene);
+				update(&mut pools, &scene, &objects);
+				render(&mut renderer, &mut pools, &scene, &camera);
 			},
 			Event::WindowEvent {
 				event: WindowEvent::CloseRequested,
