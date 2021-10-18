@@ -1,6 +1,6 @@
 [package]
 name = "wgpu_rust_renderer"
-version = "0.0.2"
+version = "0.0.3"
 description = "Tiny WebGPU Renderer in Rust"
 authors = ["Takahiro <hogehoge@gachapin.jp>"]
 edition = "2018"

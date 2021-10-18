@@ -185,7 +185,7 @@ The library is released at [crates.io](https://crates.io/crates/wgpu_rust_render
 
 ```
 [dependencies]
-wgpu_rust_renderer = "0.0.2"
+wgpu_rust_renderer = "0.0.3"
 ```
 
 And add the following lines in your Rust code to import the library.
