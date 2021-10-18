@@ -125,15 +125,13 @@ impl WGPURenderer {
 		self.pixel_ratio
 	}
 
-	pub fn render(
+	fn update(
 		&mut self,
 		pools: &ResourcePools,
 		scene_rid: &ResourceId<Scene>,
 		camera_rid: &ResourceId<PerspectiveCamera>,
 	) {
-		let attribute_pool = pools.borrow::<Attribute>();
 		let geometry_pool = pools.borrow::<Geometry>();
-		let index_pool = pools.borrow::<Index>();
 		let mesh_pool = pools.borrow::<Mesh>();
 		let material_pool = pools.borrow::<Material>();
 		let node_pool = pools.borrow::<Node>();
@@ -224,6 +222,24 @@ impl WGPURenderer {
 				&self.bindings.borrow(node_rid).unwrap().borrow_layout(),
 			);
 		}
+	}
+
+	fn render_internal(
+		&self,
+		pools: &ResourcePools,
+		scene_rid: &ResourceId<Scene>,
+	) {
+		let attribute_pool = pools.borrow::<Attribute>();
+		let geometry_pool = pools.borrow::<Geometry>();
+		let index_pool = pools.borrow::<Index>();
+		let mesh_pool = pools.borrow::<Mesh>();
+
+		// @TODO: Error handling
+
+		let scene = match pools.borrow::<Scene>().borrow(scene_rid) {
+			Some(scene) => scene,
+			None => return,
+		};
 
 		let frame = self.surface
 			.get_current_texture()
@@ -285,8 +301,11 @@ impl WGPURenderer {
 					None => continue,
 				};
 
-				let pipeline = self.render_pipelines.borrow(node_rid);
-				pass.set_pipeline(&pipeline);
+				if let Some(pipeline) = self.render_pipelines.borrow(node_rid) {
+					pass.set_pipeline(&pipeline);
+				} else {
+					continue;
+				}
 
 				// @TODO: Should be programmable
 				if let Some(rid) = geometry.borrow_attribute("position") {
@@ -327,6 +346,16 @@ impl WGPURenderer {
 
 		self.queue.submit(Some(encoder.finish()));
 		frame.present()
+	}
+
+	pub fn render(
+		&mut self,
+		pools: &ResourcePools,
+		scene_rid: &ResourceId<Scene>,
+		camera_rid: &ResourceId<PerspectiveCamera>,
+	) {
+		self.update(pools, scene_rid, camera_rid);
+		self.render_internal(pools, scene_rid);
 	}
 
 	fn update_surface_configuration(&mut self) {

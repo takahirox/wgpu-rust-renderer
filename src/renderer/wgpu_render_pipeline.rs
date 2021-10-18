@@ -122,8 +122,12 @@ impl WGPURenderPipelines {
 		}
 	}
 
-	pub fn borrow(&self, node: &ResourceId<Node>) -> &wgpu::RenderPipeline {
-		&self.pipelines.get(node).unwrap().pipeline
+	pub fn borrow(&self, node: &ResourceId<Node>) -> Option<&wgpu::RenderPipeline> {
+		if let Some(pipeline) = &self.pipelines.get(node) {
+			Some(&pipeline.pipeline)
+		} else {
+			None
+		}
 	}
 
 	pub fn update(
