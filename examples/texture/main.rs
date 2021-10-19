@@ -40,7 +40,7 @@ fn create_scene(
 		1.0,
 	);
 
-	let texture = TextureLoader::load_png(
+	let texture = TextureLoader::load_png_with_filepath(
 		pools,
 		concat!(
 			env!("CARGO_MANIFEST_DIR"),
