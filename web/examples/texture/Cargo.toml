@@ -12,7 +12,6 @@ crate-type = ["cdylib"]
 [dependencies]
 console_error_panic_hook = "0.1.6"
 console_log = "0.1.2"
-image = "0.23.14"
 js-sys = "0.3.55"
 wasm-bindgen = "0.2.78"
 wasm-bindgen-futures = "0.4.28"
@@ -23,7 +22,12 @@ version = "0.3.55"
 features = [
   "Document",
   "Element",
+  'Headers',
   "HtmlCanvasElement",
+  'Request',
+  'RequestInit',
+  'RequestMode',
+  'Response',
   "Node",
   "NodeList",
   "Window",

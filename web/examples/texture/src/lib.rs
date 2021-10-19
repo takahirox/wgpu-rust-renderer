@@ -1,6 +1,13 @@
 use wasm_bindgen::{
-	prelude::*,
 	JsCast,
+	prelude::*,
+};
+use wasm_bindgen_futures::JsFuture;
+use web_sys::{
+	Request,
+	RequestInit,
+	RequestMode,
+	Response,
 };
 use winit::{
 	event::{Event, WindowEvent},
@@ -22,13 +29,10 @@ use wgpu_rust_renderer::{
 		node::Node,
 		scene::Scene,
 	},
-	texture::texture::{
-		Texture,
-		TextureFormat,
-	},
 	utils::{
 		geometry_helper::GeometryHelper,
 		material_helper::MaterialHelper,
+		texture_loader::TextureLoader,
 	},
 	web::wgpu_web_renderer::WGPUWebRenderer,
 };
@@ -54,30 +58,7 @@ fn get_window_device_pixel_ratio() -> f64 {
 	window.device_pixel_ratio()
 }
 
-fn load_texture(pools: &mut ResourcePools) -> ResourceId<Texture> {
-	let data = include_bytes!(
-		concat!(
-			env!("CARGO_MANIFEST_DIR"),
-			"/assets/texture.png",
-		),
-	);
-
-	let data = image::load_from_memory_with_format(
-		data,
-		image::ImageFormat::Png
-	).unwrap().to_rgba8().to_vec();
-
-	pools.borrow_mut::<Texture>().add(
-		Texture::new(
-			256,
-			256,
-			TextureFormat::Uint8,
-			data,
-		)
-	)
-}
-
-fn create_scene(
+async fn create_scene(
 	pools: &mut ResourcePools
 ) -> (ResourceId<Scene>, ResourceId<PerspectiveCamera>, Vec<ResourceId<Node>>) {
 	let mut objects = Vec::new();
@@ -90,7 +71,16 @@ fn create_scene(
 		1.0,
 	);
 
-	let texture = load_texture(pools);
+	let texture = TextureLoader::load_png(
+		pools,
+		std::io::Cursor::new(
+			// Path from index.html
+			load_file("./assets/texture.png".to_string())
+				.await
+				.unwrap(),
+		)
+	);
+
 	let material = MaterialHelper::create_basic_material_with_texture(
 		pools,
 		Color::set(&mut Color::create(), 1.0, 1.0, 1.0),
@@ -221,7 +211,7 @@ pub async fn start() {
 	renderer.set_pixel_ratio(pixel_ratio as f64);
 
 	let mut pools = ResourcePools::new();
-	let (scene, camera, objects) = create_scene(&mut pools);
+	let (scene, camera, objects) = create_scene(&mut pools).await;
 
 	event_loop.run(move |event, _, control_flow| {
 		*control_flow = ControlFlow::Poll;
@@ -250,4 +240,39 @@ pub async fn start() {
 			_ => {}
 		}
 	});
+}
+
+// @TODO: Proper error handling
+pub async fn load_file(url: String) -> Result<Vec<u8>, String> {
+	let mut opts = RequestInit::new();
+	opts.method("GET");
+	opts.mode(RequestMode::Cors); // @TODO: Should be able to opt-out
+
+	let request = match Request::new_with_str_and_init(&url, &opts) {
+		Ok(request) => request,
+		Err(_e) => return Err("Failed to create request".to_string()),
+	};
+
+	let window = web_sys::window().unwrap();
+	let response = match JsFuture::from(window.fetch_with_request(&request)).await {
+		Ok(response) => response,
+		Err(_e) => return Err("Failed to fetch".to_string()),
+	};
+
+	let response: Response = match response.dyn_into() {
+		Ok(response) => response,
+		Err(_e) => return Err("Failed to dyn_into Response".to_string()),
+	};
+
+	let buffer = match response.array_buffer() {
+		Ok(buffer) => buffer,
+		Err(_e) => return Err("Failed to get as array buffer".to_string()),
+	};
+
+	let buffer = match JsFuture::from(buffer).await {
+		Ok(buffer) => buffer,
+		Err(_e) => return Err("Failed to ...?".to_string()),
+	};
+
+	Ok(js_sys::Uint8Array::new(&buffer).to_vec())
 }
