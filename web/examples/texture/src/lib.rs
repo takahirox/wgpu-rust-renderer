@@ -1,17 +1,20 @@
-use wasm_bindgen::{
-	JsCast,
-	prelude::*,
-};
-use wasm_bindgen_futures::JsFuture;
-use web_sys::{
-	Request,
-	RequestInit,
-	RequestMode,
-	Response,
-};
+#[path = "../../utils/fetch.rs"]
+mod fetch;
+
+#[path = "../../utils/window.rs"]
+mod window;
+
+use wasm_bindgen::prelude::*;
 use winit::{
 	event::{Event, WindowEvent},
 	event_loop::{ControlFlow, EventLoop},
+};
+
+use fetch::fetch_as_binary;
+use window::{
+	create_window,
+	get_window_device_pixel_ratio,
+	get_window_inner_size,
 };
 
 use wgpu_rust_renderer::{
@@ -37,27 +40,6 @@ use wgpu_rust_renderer::{
 	web::wgpu_web_renderer::WGPUWebRenderer,
 };
 
-#[wasm_bindgen]
-extern "C" {
-	#[wasm_bindgen(js_namespace = console)]
-	fn log(s: &str);
-}
-
-// Window and DOM element helpers
-
-fn get_window_inner_size() -> (f64, f64) {
-	let window = web_sys::window().unwrap();
-	(
-		window.inner_width().unwrap().as_f64().unwrap(),
-		window.inner_height().unwrap().as_f64().unwrap()
-	)
-}
-
-fn get_window_device_pixel_ratio() -> f64 {
-	let window = web_sys::window().unwrap();
-	window.device_pixel_ratio()
-}
-
 async fn create_scene(
 	pools: &mut ResourcePools
 ) -> (ResourceId<Scene>, ResourceId<PerspectiveCamera>, Vec<ResourceId<Node>>) {
@@ -75,7 +57,7 @@ async fn create_scene(
 		pools,
 		std::io::Cursor::new(
 			// Path from index.html
-			load_file("./assets/texture.png".to_string())
+			fetch_as_binary("./assets/texture.png".to_string())
 				.await
 				.unwrap(),
 		)
@@ -161,29 +143,6 @@ fn render(
 	renderer.render(pools, scene, camera);
 }
 
-fn create_window(event_loop: &EventLoop<()>) -> std::rc::Rc<winit::window::Window> {
-	let window = winit::window::Window::new(&event_loop).unwrap();
-	let window = std::rc::Rc::new(window);
-
-	// winit::window::Window doesn't seem to detect browser's onresize event so we emulate it.
-    {
-		let window = window.clone();
-		let closure = Closure::wrap(Box::new(move |_e: web_sys::Event| {
-			let size = get_window_inner_size();
-			window.set_inner_size(winit::dpi::PhysicalSize::new(
-				size.0, size.1,
-			));
-		}) as Box<dyn FnMut(_)>);
-		web_sys::window()
-			.unwrap()
-			.add_event_listener_with_callback("resize", closure.as_ref().unchecked_ref())
-			.unwrap();
-		closure.forget();
-    }
-
-	window
-}
-
 #[wasm_bindgen(start)]
 pub async fn start() {
 	std::panic::set_hook(Box::new(console_error_panic_hook::hook));
@@ -240,39 +199,4 @@ pub async fn start() {
 			_ => {}
 		}
 	});
-}
-
-// @TODO: Proper error handling
-pub async fn load_file(url: String) -> Result<Vec<u8>, String> {
-	let mut opts = RequestInit::new();
-	opts.method("GET");
-	opts.mode(RequestMode::Cors); // @TODO: Should be able to opt-out
-
-	let request = match Request::new_with_str_and_init(&url, &opts) {
-		Ok(request) => request,
-		Err(_e) => return Err("Failed to create request".to_string()),
-	};
-
-	let window = web_sys::window().unwrap();
-	let response = match JsFuture::from(window.fetch_with_request(&request)).await {
-		Ok(response) => response,
-		Err(_e) => return Err("Failed to fetch".to_string()),
-	};
-
-	let response: Response = match response.dyn_into() {
-		Ok(response) => response,
-		Err(_e) => return Err("Failed to dyn_into Response".to_string()),
-	};
-
-	let buffer = match response.array_buffer() {
-		Ok(buffer) => buffer,
-		Err(_e) => return Err("Failed to get as array buffer".to_string()),
-	};
-
-	let buffer = match JsFuture::from(buffer).await {
-		Ok(buffer) => buffer,
-		Err(_e) => return Err("Failed to ...?".to_string()),
-	};
-
-	Ok(js_sys::Uint8Array::new(&buffer).to_vec())
 }

@@ -1,11 +1,16 @@
-use wasm_bindgen::{
-	prelude::*,
-	JsCast,
-};
+#[path = "../../utils/window.rs"]
+mod window;
 
+use wasm_bindgen::prelude::*;
 use winit::{
 	event::{Event, WindowEvent},
 	event_loop::{ControlFlow, EventLoop},
+};
+
+use window::{
+	create_window,
+	get_window_device_pixel_ratio,
+	get_window_inner_size,
 };
 
 use wgpu_rust_renderer::{
@@ -26,27 +31,6 @@ use wgpu_rust_renderer::{
 	},
 	web::wgpu_web_renderer::WGPUWebRenderer,
 };
-
-#[wasm_bindgen]
-extern "C" {
-	#[wasm_bindgen(js_namespace = console)]
-	fn log(s: &str);
-}
-
-// Window and DOM element helpers
-
-fn get_window_inner_size() -> (f64, f64) {
-	let window = web_sys::window().unwrap();
-	(
-		window.inner_width().unwrap().as_f64().unwrap(),
-		window.inner_height().unwrap().as_f64().unwrap()
-	)
-}
-
-fn get_window_device_pixel_ratio() -> f64 {
-	let window = web_sys::window().unwrap();
-	window.device_pixel_ratio()
-}
 
 fn create_scene(
 	pools: &mut ResourcePools
@@ -129,29 +113,6 @@ fn render(
 	camera: &ResourceId<PerspectiveCamera>,
 ) {
 	renderer.render(pools, scene, camera);
-}
-
-fn create_window(event_loop: &EventLoop<()>) -> std::rc::Rc<winit::window::Window> {
-	let window = winit::window::Window::new(&event_loop).unwrap();
-	let window = std::rc::Rc::new(window);
-
-	// winit::window::Window doesn't seem to detect browser's onresize event so we emulate it.
-    {
-		let window = window.clone();
-		let closure = Closure::wrap(Box::new(move |_e: web_sys::Event| {
-			let size = get_window_inner_size();
-			window.set_inner_size(winit::dpi::PhysicalSize::new(
-				size.0, size.1,
-			));
-		}) as Box<dyn FnMut(_)>);
-		web_sys::window()
-			.unwrap()
-			.add_event_listener_with_callback("resize", closure.as_ref().unchecked_ref())
-			.unwrap();
-		closure.forget();
-    }
-
-	window
 }
 
 #[wasm_bindgen(start)]

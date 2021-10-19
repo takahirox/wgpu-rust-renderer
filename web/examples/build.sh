@@ -1,4 +1,4 @@
-for dir in $(ls -d ./*/ | grep -v icons)
+for dir in $(ls -d ./*/ | grep -v icons | grep -v utils)
 do
   cd $dir
   bash build.sh
