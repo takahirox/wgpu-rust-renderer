@@ -15,8 +15,11 @@ pub struct TextureLoader {
 }
 
 impl TextureLoader {
-	pub fn load_png(pools: &mut ResourcePools, file_path: &str) -> ResourceId<Texture> {
-		let decoder = png::Decoder::new(File::open(file_path).unwrap());
+	pub fn load_png<R: std::io::Read>(
+		pools: &mut ResourcePools,
+		reader: R,
+	) -> ResourceId<Texture> {
+		let decoder = png::Decoder::new(reader);
 		let mut reader = decoder.read_info().unwrap();
 		let (width, height) = {
 			let info = reader.info();
@@ -33,5 +36,12 @@ impl TextureLoader {
 				buf,
 			)
 		)
+	}
+
+	pub fn load_png_with_filepath(
+		pools: &mut ResourcePools,
+		file_path: &str,
+	)-> ResourceId<Texture> {
+		Self::load_png(pools, File::open(file_path).unwrap())
 	}
 }
