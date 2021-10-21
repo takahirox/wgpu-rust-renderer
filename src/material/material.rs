@@ -58,7 +58,6 @@ fn vs_main(
 const FRAGMENT_CHUNK1: &str = "
 [[stage(fragment)]]
 fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
-  var color = vec3<f32>(1.0);
   var alpha = f32(1.0);
 ";
 
@@ -132,7 +131,8 @@ impl Material {
 
 	fn build_fragment_shader(&self) -> String {
 		FRAGMENT_CHUNK1.to_string() +
-		&"  color = color * ".to_string() + &self.color.build_fragment_shader() + &";".to_string() +
+		&self.color.build_fragment_shader() +
+		&format!("var color: vec3<f32> = {};\n", self.color.get_fragment_output()) +
 		&FRAGMENT_CHUNK2.to_string()
 	}
 
@@ -145,7 +145,7 @@ impl Material {
 				match contents {
 					UniformContents::Texture {value: _} => {},
 					_ => {
-						s += &format!("  {};", node.build_declaration());
+						s += &node.build_declaration();
 					},
 				}
 			}

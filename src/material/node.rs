@@ -10,12 +10,14 @@ pub enum UniformContents {
 }
 
 pub trait MaterialNode {
-	fn get_name(&self) -> String;
 	fn collect_leaf_nodes<'a> (&'a self, nodes: &mut Vec<&'a dyn MaterialNode>);
 	fn borrow_contents(&self) -> Option<&UniformContents>;
 	fn build_declaration(&self) -> String;
 	fn build_fragment_shader(&self) -> String;
+	fn get_fragment_output(&self) -> String;
 }
+
+// @TODO: Ensure unique variable names
 
 pub struct Vector3Node {
 	contents: UniformContents,
@@ -31,13 +33,13 @@ impl Vector3Node {
 			label: label.to_string(),
 		}
 	}
-}
 
-impl MaterialNode for Vector3Node {
 	fn get_name(&self) -> String {
 		format!("vec3_{}", &self.label)
 	}
+}
 
+impl MaterialNode for Vector3Node {
 	fn collect_leaf_nodes<'a> (&'a self, nodes: &mut Vec<&'a dyn MaterialNode>) {
 		nodes.push(self as &dyn MaterialNode);
 	}
@@ -47,11 +49,15 @@ impl MaterialNode for Vector3Node {
 	}
 
 	fn build_declaration(&self) -> String {
-		format!("{}: vec3<f32>", self.get_name())
+		format!("{}: vec3<f32>;\n", self.get_name())
 	}
 
 	fn build_fragment_shader(&self) -> String {
-		format!("unif.{}", self.get_name())
+		format!("let {}_output = unif.{};\n", self.get_name(), self.get_name())
+	}
+
+	fn get_fragment_output(&self) -> String {
+		format!("{}_output", self.get_name())
 	}
 }
 
@@ -69,13 +75,13 @@ impl TextureRGBNode {
 			label: label.to_string(),
 		}
 	}
-}
 
-impl MaterialNode for TextureRGBNode {
 	fn get_name(&self) -> String {
 		format!("texture_{}", self.label)
 	}
+}
 
+impl MaterialNode for TextureRGBNode {
 	fn collect_leaf_nodes<'a> (&'a self, nodes: &mut Vec<&'a dyn MaterialNode>) {
 		nodes.push(self as &dyn MaterialNode);
 	}
@@ -85,11 +91,16 @@ impl MaterialNode for TextureRGBNode {
 	}
 
 	fn build_declaration(&self) -> String {
-		format!("var {}: texture_2d<f32>", self.get_name())
+		format!("var {}: texture_2d<f32>;", self.get_name())
 	}
 
 	fn build_fragment_shader(&self) -> String {
-		format!("textureLoad({}, vec2<i32>(in.uv * 256.0), 0).rgb", self.get_name())
+		format!("let {}_output = textureLoad({}, vec2<i32>(in.uv * 256.0), 0).rgb;\n",
+			self.get_name(), self.get_name())
+	}
+
+	fn get_fragment_output(&self) -> String {
+		format!("{}_output", self.get_name())
 	}
 }
 
@@ -108,10 +119,6 @@ impl MultiplyNode {
 }
 
 impl MaterialNode for MultiplyNode {
-	fn get_name(&self) -> String {
-		format!("")
-	}
-
 	fn collect_leaf_nodes<'a> (&'a self, nodes: &mut Vec<&'a dyn MaterialNode>) {
 		self.value1.collect_leaf_nodes(nodes);
 		self.value2.collect_leaf_nodes(nodes);
@@ -122,18 +129,18 @@ impl MaterialNode for MultiplyNode {
 	}
 
 	fn build_declaration(&self) -> String {
-		format!(
-			"{}{}",
-			self.value1.build_declaration(),
-			self.value2.build_declaration(),
-		)
+		format!("")
 	}
 
 	fn build_fragment_shader(&self) -> String {
-		format!(
-			"({} * {})",
-			self.value1.build_fragment_shader(),
-			self.value2.build_fragment_shader(),
-		)
+		self.value1.build_fragment_shader() +
+		&self.value2.build_fragment_shader() +
+		&format!("let multiply_output = {} * {};\n",
+			self.value1.get_fragment_output(),
+			self.value2.get_fragment_output())
+	}
+
+	fn get_fragment_output(&self) -> String {
+		format!("multiply_output")
 	}
 }
