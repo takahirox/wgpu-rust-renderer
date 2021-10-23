@@ -18,7 +18,10 @@ use crate::{
 		geometry::Geometry,
 		index::Index,
 	},
-	material::material::Material,
+	material::{
+		material::Material,
+		node::node::MaterialNode,
+	},
 	scene::{
 		camera::PerspectiveCamera,
 		mesh::Mesh,
@@ -109,6 +112,7 @@ impl ResourcePools {
 		Self::add::<Geometry>(&mut pools);
 		Self::add::<Index>(&mut pools);
 		Self::add::<Material>(&mut pools);
+		Self::add::<Box<dyn MaterialNode>>(&mut pools);
 		Self::add::<Mesh>(&mut pools);
 		Self::add::<Node>(&mut pools);
 		Self::add::<PerspectiveCamera>(&mut pools);

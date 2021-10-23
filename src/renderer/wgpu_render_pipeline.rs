@@ -2,8 +2,14 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 
 use crate::{
-	material::material::Material,
-	resource::resource::ResourceId,
+	material::{
+		material::Material,
+		node::node::MaterialNode,
+	},
+	resource::resource::{
+		ResourceId,
+		ResourcePools,
+	},
 	scene::node::Node,
 };
 
@@ -135,6 +141,7 @@ impl WGPURenderPipelines {
 		device: &wgpu::Device,
 		adapter: &wgpu::Adapter,
 		surface: &wgpu::Surface,
+		pools: &ResourcePools,
 		node: &ResourceId<Node>,
 		material: &Material,
 		bind_group_layout: &wgpu::BindGroupLayout,
@@ -147,7 +154,9 @@ impl WGPURenderPipelines {
 					adapter,
 					surface,
 					bind_group_layout,
-					&material.build_shader_code(),
+					&material.build_shader_code(
+						pools.borrow::<Box<dyn MaterialNode>>(),
+					),
 				)
 			);
 		}

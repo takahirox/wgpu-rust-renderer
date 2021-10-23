@@ -217,6 +217,7 @@ impl WGPURenderer {
 				&self.device,
 				&self.adapter,
 				&self.surface,
+				pools,
 				node_rid,
 				material,
 				&self.bindings.borrow(node_rid).unwrap().borrow_layout(),

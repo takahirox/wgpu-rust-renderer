@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 use crate::{
-	material::material::Material,
+	material::{
+		material::Material,
+		node::node::MaterialNode,
+	},
 	resource::resource::{
 		ResourceId,
 		ResourcePools,
@@ -61,7 +64,9 @@ impl WGPUTextures {
 		pools: &ResourcePools,
 		material: &Material,
 	) {
-		let textures = material.borrow_textures();
+		let textures = material.borrow_textures(
+			pools.borrow::<Box<dyn MaterialNode>>(),
+		);
 		for texture in textures.iter() {
 			self.update(device, queue, pools, texture);
 		}

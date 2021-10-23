@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use crate::{
 	material::{
 		material::Material,
-		node::UniformContents,
+		node::node::{
+			MaterialNode,
+			UniformContents,
+		},
 	},
 	math::{
 		matrix3::Matrix3,
@@ -31,11 +34,14 @@ impl WGPUBinding {
 	fn new(
 		device: &wgpu::Device,
 		wgpu_textures: &WGPUTextures,
+		pools: &ResourcePools,
 		material: &Material,
 	) -> Self {
-		let layout = Self::build_layout(device, material);
+		let layout = Self::build_layout(device, pools, material);
 
-		let textures = material.borrow_textures();
+		let textures = material.borrow_textures(
+			pools.borrow::<Box<dyn MaterialNode>>(),
+		);
 		let mut textures_gpu = Vec::new();
 		for texture in textures.iter() {
 			if let Some(texture) = wgpu_textures.borrow(texture) {
@@ -43,7 +49,7 @@ impl WGPUBinding {
 			}
 		}
 
-		let buffers = Self::build_buffers(device, material);
+		let buffers = Self::build_buffers(device, pools, material);
 		let group = Self::build_group(device, &layout, &buffers, &textures_gpu);
 
 		WGPUBinding {
@@ -68,6 +74,7 @@ impl WGPUBinding {
 	pub fn update(
 		&self,
 		queue: &wgpu::Queue,
+		pools: &ResourcePools,
 		node: &Node,
 		camera: &PerspectiveCamera,
 		camera_node: &Node,
@@ -93,11 +100,39 @@ impl WGPUBinding {
 		queue.write_buffer(&self.buffers[1], 0, bytemuck::cast_slice(camera.borrow_projection_matrix()));
 
 		let mut offset = 0;
-		for contents in material.borrow_contents().iter() {
+		// @TODO: Optimize
+		for contents in material.borrow_contents(
+			pools.borrow::<Box<dyn MaterialNode>>(),
+		).iter() {
 			match contents {
+				UniformContents::Float {value: _} |
+				UniformContents::Vector3 {value: _} |
+				UniformContents::Matrix4 {value: _} => {
+					let align = get_align(contents);
+					offset += (align - (offset % align)) % align;
+				},
+				_ => {},
+			};
+
+			// Can we use generics?
+			match contents {
+				UniformContents::Float {value} => {
+					queue.write_buffer(&self.buffers[2], offset, bytemuck::cast_slice(value));
+				},
 				UniformContents::Vector3 {value} => {
 					queue.write_buffer(&self.buffers[2], offset, bytemuck::cast_slice(value));
-					offset += get_align(contents);
+				},
+				UniformContents::Matrix4 {value} => {
+					queue.write_buffer(&self.buffers[2], offset, bytemuck::cast_slice(value));
+				},
+				_ => {},
+			};
+
+			match contents {
+				UniformContents::Float {value: _} |
+				UniformContents::Vector3 {value: _} |
+				UniformContents::Matrix4 {value: _} => {
+					offset += get_byte(contents);
 				},
 				_ => {},
 			};
@@ -106,20 +141,36 @@ impl WGPUBinding {
 
 	fn build_layout(
 		device: &wgpu::Device,
+		pools: &ResourcePools,
 		material: &Material
 	) -> wgpu::BindGroupLayout {
 		let mut entries = Vec::new();
 		let mut buffer_size = 0;
+		let mut max_align = 0;
 
 		// binding 0 : Object (model-view matrix, normal matrix)
 		// binding 1 : Camera (projection matrix)
 		// binding 2 : Uniform buffers
 		// binding 3- : Textures
 
-		for contents in material.borrow_contents().iter() {
+		for contents in material.borrow_contents(
+			pools.borrow::<Box<dyn MaterialNode>>(),
+		).iter() {
 			match contents {
+				UniformContents::Float {value: _} |
 				UniformContents::Matrix4 {value: _} |
-				UniformContents::Vector3 {value: _} => {buffer_size += get_align(contents)},
+				UniformContents::Vector3 {value: _} => {
+					let align = get_align(contents);
+
+					max_align = if align > max_align {
+						align
+					} else {
+						max_align
+					};
+
+					buffer_size += (align - (buffer_size % align)) % align;
+					buffer_size += get_byte(contents);
+				},
 				UniformContents::Texture {value: _} => {
 					entries.push(wgpu::BindGroupLayoutEntry {
 						binding: entries.len() as u32 + 3,
@@ -137,6 +188,8 @@ impl WGPUBinding {
 				},
 			};
 		}
+
+		buffer_size += (max_align - (buffer_size % max_align)) % max_align;
 
 		entries.push(wgpu::BindGroupLayoutEntry {
 			binding: 0,
@@ -214,6 +267,7 @@ impl WGPUBinding {
 
 	fn build_buffers(
 		device: &wgpu::Device,
+		pools: &ResourcePools,
 		material: &Material,
 	) -> Vec<wgpu::Buffer> {
 		let mut buffers = Vec::new();
@@ -226,11 +280,16 @@ impl WGPUBinding {
 		buffers.push(create_buffer(device, 16 * 4));
 
 		let mut buffer_size = 0;
-		for contents in material.borrow_contents().iter() {
+		for contents in material.borrow_contents(
+			pools.borrow::<Box<dyn MaterialNode>>(),
+		).iter() {
 			match contents {
+				UniformContents::Float {value: _} |
 				UniformContents::Matrix4 {value: _} |
 				UniformContents::Vector3 {value: _} => {
-					buffer_size += get_byte(contents)
+					let align = get_align(contents);
+					buffer_size += (align - (buffer_size % align)) % align;
+					buffer_size += get_byte(contents);
 				},
 				_ => {},
 			};
@@ -268,12 +327,12 @@ impl WGPUBindings {
 		material: &Material,
 	) {
 		if !self.groups.contains_key(node_rid) {
-			self.groups.insert(*node_rid, WGPUBinding::new(device, wgpu_textures, material));
+			self.groups.insert(*node_rid, WGPUBinding::new(device, wgpu_textures, pools, material));
 		}
 
 		if let Some(node) = pools.borrow::<Node>().borrow(node_rid) {
 			let binding = self.groups.get(node_rid).unwrap();
-			binding.update(queue, node, camera, camera_node, material);
+			binding.update(queue, pools, node, camera, camera_node, material);
 		}
 	}
 }
@@ -289,6 +348,8 @@ fn create_buffer(device: &wgpu::Device, size_in_byte: usize) -> wgpu::Buffer {
 
 fn get_byte(contents: &UniformContents) -> u64 {
 	match contents {
+		UniformContents::Float {value: _} => 4,
+		UniformContents::Matrix4 {value: _} => 64,
 		UniformContents::Vector3 {value: _} => 12,
 		_ => 0,
 	}
@@ -296,6 +357,8 @@ fn get_byte(contents: &UniformContents) -> u64 {
 
 fn get_align(contents: &UniformContents) -> u64 {
 	match contents {
+		UniformContents::Float {value: _} => 4,
+		UniformContents::Matrix4 {value: _} => 64,
 		UniformContents::Vector3 {value: _} => 16,
 		_ => 0,
 	}
