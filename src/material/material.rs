@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::{
 	material::node::node::{
 		MaterialNode,
@@ -7,7 +8,10 @@ use crate::{
 		ResourceId,
 		ResourcePool,
 	},
-	texture::texture::Texture,
+	texture::{
+		sampler::Sampler,
+		texture::Texture,
+	},
 };
 
 const PREFIX_CHUNK1: &str = "struct VertexOutput {
@@ -123,15 +127,42 @@ impl Material {
 		pool: &'a ResourcePool<Box<dyn MaterialNode>>,
 	) -> Vec<&'a ResourceId<Texture>> {
 		let mut textures = Vec::new();
+		let mut founds = HashMap::new();
+
 		for contents in self.borrow_contents(pool).iter() {
 			match contents {
-				UniformContents::Texture {value} => {
-					textures.push(value);
+				UniformContents::Texture {texture, ..} => {
+					if !founds.contains_key(texture) {
+						textures.push(texture);
+						founds.insert(*texture, true);
+					}
 				},
 				_ => {},
 			};
 		}
 		textures
+	}
+
+	// @TODO: Optimize?
+	pub fn borrow_samplers<'a>(
+		&'a self,
+		pool: &'a ResourcePool<Box<dyn MaterialNode>>,
+	) -> Vec<&'a ResourceId<Sampler>> {
+		let mut samplers = Vec::new();
+		let mut founds = HashMap::new();
+
+		for contents in self.borrow_contents(pool).iter() {
+			match contents {
+				UniformContents::Texture {sampler, ..} => {
+					if !founds.contains_key(sampler) {
+						samplers.push(sampler);
+						founds.insert(*sampler, true);
+					}
+				},
+				_ => {},
+			};
+		}
+		samplers
 	}
 
 	pub fn build_shader_code(
@@ -181,7 +212,7 @@ impl Material {
 			let node = pool.borrow(node).unwrap();
 			if let Some(contents) = node.borrow_contents() {
 				match contents {
-					UniformContents::Texture {value: _} => {},
+					UniformContents::Texture {..} => {},
 					_ => {
 						s += &node.build_declaration();
 					},
@@ -199,18 +230,19 @@ impl Material {
 		// bindings for textures start with 3
 		let mut binding = 3;
 		let mut s = "".to_string();
-		for node in self.borrow_nodes(pool).iter() {
-			let node = pool.borrow(node).unwrap();
-			if let Some(contents) = node.borrow_contents() {
-				match contents {
-					UniformContents::Texture {value: _} => {
-						s += &format!("\n[[group(0), binding({})]]\n", binding);
-						s += &format!("{};\n", node.build_declaration());
-						binding += 1;
-					},
-					_ => {},
-				}
-			}
+
+		// Textures first
+		for texture in self.borrow_textures(pool).iter() {
+			s += &format!("\n[[group(0), binding({})]]\n", binding);
+			s += &format!("var texture_{}: texture_2d<f32>;\n", texture.id);
+			binding += 1;
+		}
+
+		// Samplers next
+		for sampler in self.borrow_samplers(pool).iter() {
+			s += &format!("\n[[group(0), binding({})]]\n", binding);
+			s += &format!("var sampler_{}: sampler;\n", sampler.id);
+			binding += 1;
 		}
 		s
 	}

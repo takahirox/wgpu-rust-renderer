@@ -12,6 +12,7 @@ use crate::{
 		wgpu_bindings::WGPUBindings,
 		wgpu_indices::WGPUIndices,
 		wgpu_render_pipeline::WGPURenderPipelines,
+		wgpu_samplers::WGPUSamplers,
 		wgpu_textures::WGPUTextures,
 	},
 	resource::resource::{
@@ -37,6 +38,7 @@ pub struct WGPURenderer {
 	pixel_ratio: f64,
 	queue: wgpu::Queue,
 	render_pipelines: WGPURenderPipelines,
+	samplers: WGPUSamplers,
 	surface: wgpu::Surface,
 	surface_configuration: wgpu::SurfaceConfiguration,
 	textures: WGPUTextures,
@@ -95,6 +97,7 @@ impl WGPURenderer {
 			pixel_ratio: pixel_ratio,
 			queue: queue,
 			render_pipelines: WGPURenderPipelines::new(),
+			samplers: WGPUSamplers::new(),
 			surface: surface,
 			surface_configuration: surface_configuration,
 			textures: WGPUTextures::new(),
@@ -202,10 +205,17 @@ impl WGPURenderer {
 				material,
 			);
 
+			self.samplers.update_from_material(
+				&self.device,
+				pools,
+				material,
+			);
+
 			self.bindings.update(
 				&self.device,
 				&self.queue,
 				&self.textures,
+				&self.samplers,
 				pools,
 				node_rid,
 				camera,

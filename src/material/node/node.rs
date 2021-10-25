@@ -3,14 +3,20 @@ use crate::{
 		ResourceId,
 		ResourcePool,
 	},
-	texture::texture::Texture,
+	texture::{
+		sampler::Sampler,
+		texture::Texture,
+	},
 };
 
 pub enum UniformContents {
 	Float {value: [f32; 1]},
 	Matrix4 {value: [f32; 16]},
 	Vector3 {value: [f32; 3]},
-	Texture {value: ResourceId<Texture>},
+	Texture {
+		texture: ResourceId<Texture>,
+		sampler: ResourceId<Sampler>,
+	},
 }
 
 pub trait MaterialNode {

@@ -28,7 +28,10 @@ use crate::{
 		node::Node,
 		scene::Scene,
 	},
-	texture::texture::Texture,
+	texture::{
+		sampler::Sampler,
+		texture::Texture,
+	},
 };
 
 trait ResourcePoolTrait {
@@ -117,6 +120,7 @@ impl ResourcePools {
 		Self::add::<Node>(&mut pools);
 		Self::add::<PerspectiveCamera>(&mut pools);
 		Self::add::<Scene>(&mut pools);
+		Self::add::<Sampler>(&mut pools);
 		Self::add::<Texture>(&mut pools);
 
 		ResourcePools {

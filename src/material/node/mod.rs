@@ -4,5 +4,6 @@ pub mod const_vector3;
 pub mod float;
 pub mod multiply;
 pub mod node;
-pub mod texture_rgb;
+pub mod texture;
 pub mod vector3;
+pub mod xyz;

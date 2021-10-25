@@ -13,7 +13,10 @@ use crate::{
 		matrix3gpu::Matrix3GPU,
 		matrix4::Matrix4,
 	},
-	renderer::wgpu_textures::WGPUTextures,
+	renderer::{
+		wgpu_samplers::WGPUSamplers,
+		wgpu_textures::WGPUTextures,
+	},
 	resource::resource::{
 		ResourceId,
 		ResourcePools,
@@ -34,6 +37,7 @@ impl WGPUBinding {
 	fn new(
 		device: &wgpu::Device,
 		wgpu_textures: &WGPUTextures,
+		wgpu_samplers: &WGPUSamplers,
 		pools: &ResourcePools,
 		material: &Material,
 	) -> Self {
@@ -49,8 +53,24 @@ impl WGPUBinding {
 			}
 		}
 
+		let samplers = material.borrow_samplers(
+			pools.borrow::<Box<dyn MaterialNode>>(),
+		);
+		let mut samplers_gpu = Vec::new();
+		for sampler in samplers.iter() {
+			if let Some(sampler) = wgpu_samplers.borrow(sampler) {
+				samplers_gpu.push(sampler);
+			}
+		}
+
 		let buffers = Self::build_buffers(device, pools, material);
-		let group = Self::build_group(device, &layout, &buffers, &textures_gpu);
+		let group = Self::build_group(
+			device,
+			&layout,
+			&buffers,
+			&textures_gpu,
+			&samplers_gpu,
+		);
 
 		WGPUBinding {
 			buffers: buffers,
@@ -152,14 +172,15 @@ impl WGPUBinding {
 		// binding 1 : Camera (projection matrix)
 		// binding 2 : Uniform buffers
 		// binding 3- : Textures
+		// binding n- : Samplers
 
 		for contents in material.borrow_contents(
 			pools.borrow::<Box<dyn MaterialNode>>(),
 		).iter() {
 			match contents {
-				UniformContents::Float {value: _} |
-				UniformContents::Matrix4 {value: _} |
-				UniformContents::Vector3 {value: _} => {
+				UniformContents::Float {..} |
+				UniformContents::Matrix4 {..} |
+				UniformContents::Vector3 {..} => {
 					let align = get_align(contents);
 
 					max_align = if align > max_align {
@@ -171,14 +192,14 @@ impl WGPUBinding {
 					buffer_size += (align - (buffer_size % align)) % align;
 					buffer_size += get_byte(contents);
 				},
-				UniformContents::Texture {value: _} => {
+				UniformContents::Texture {..} => {
 					entries.push(wgpu::BindGroupLayoutEntry {
 						binding: entries.len() as u32 + 3,
 						count: None,
 						ty: wgpu::BindingType::Texture {
 							multisampled: false,
 							sample_type: wgpu::TextureSampleType::Float {
-								filterable: false,
+								filterable: true,
 							},
 							view_dimension: wgpu::TextureViewDimension::D2,
 						},
@@ -186,6 +207,28 @@ impl WGPUBinding {
 						visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
 					});
 				},
+			};
+		}
+
+		// @TODO: Fix me. Loop twice is inefficient
+		for contents in material.borrow_contents(
+			pools.borrow::<Box<dyn MaterialNode>>(),
+		).iter() {
+			match contents {
+				UniformContents::Texture {..} => {
+					entries.push(wgpu::BindGroupLayoutEntry {
+						binding: entries.len() as u32 + 3,
+						count: None,
+						// @TODO: Fix me if needed
+						ty: wgpu::BindingType::Sampler {
+							filtering: true,
+							comparison: false,
+						},
+						// @TODO: Fix me
+						visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+					});
+				},
+				_ => {},
 			};
 		}
 
@@ -236,6 +279,7 @@ impl WGPUBinding {
 		layout: &wgpu::BindGroupLayout,
 		buffers: &Vec<wgpu::Buffer>,
 		textures: &Vec<&wgpu::Texture>,
+		samplers: &Vec<&wgpu::Sampler>,
 	) -> wgpu::BindGroup {
 		let mut entries = Vec::new();
 
@@ -255,6 +299,13 @@ impl WGPUBinding {
 			entries.push(wgpu::BindGroupEntry {
 				binding: entries.len() as u32,
 				resource: wgpu::BindingResource::TextureView(&texture_view),
+			});
+		}
+
+		for sampler in samplers.iter() {
+			entries.push(wgpu::BindGroupEntry {
+				binding: entries.len() as u32,
+				resource: wgpu::BindingResource::Sampler(sampler),
 			});
 		}
 
@@ -320,6 +371,7 @@ impl WGPUBindings {
 		device: &wgpu::Device,
 		queue: &wgpu::Queue,
 		wgpu_textures: &WGPUTextures,
+		wgpu_samplers: &WGPUSamplers,
 		pools: &ResourcePools,
 		node_rid: &ResourceId<Node>,
 		camera: &PerspectiveCamera,
@@ -327,7 +379,13 @@ impl WGPUBindings {
 		material: &Material,
 	) {
 		if !self.groups.contains_key(node_rid) {
-			self.groups.insert(*node_rid, WGPUBinding::new(device, wgpu_textures, pools, material));
+			self.groups.insert(*node_rid, WGPUBinding::new(
+				device,
+				wgpu_textures,
+				wgpu_samplers,
+				pools,
+				material
+			));
 		}
 
 		if let Some(node) = pools.borrow::<Node>().borrow(node_rid) {
