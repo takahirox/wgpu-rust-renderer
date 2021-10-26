@@ -10,19 +10,17 @@ use crate::{
 	},
 };
 
-pub struct ConstFloatNode {
-	value: f32,
+pub struct NormalNode {
 }
 
-impl ConstFloatNode {
-	pub fn new(value: f32) -> Self {
-		ConstFloatNode {
-			value: value,
+impl NormalNode {
+	pub fn new() -> Self {
+		NormalNode {
 		}
 	}
 }
 
-impl MaterialNode for ConstFloatNode {
+impl MaterialNode for NormalNode {
 	fn collect_nodes (
 		&self,
 		_pool: &ResourcePool<Box<dyn MaterialNode>>,
@@ -58,6 +56,6 @@ impl MaterialNode for ConstFloatNode {
 	}
 
 	fn get_fragment_output(&self, _self_id: usize) -> String {
-		format!("{:.16}", self.value)
+		format!("in.normal")
 	}
 }

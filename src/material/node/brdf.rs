@@ -57,6 +57,7 @@ fn brdf(
 pub struct BRDFNodeDescriptor {
 	pub base_color: ResourceId<Box<dyn MaterialNode>>,
 	pub metallic: ResourceId<Box<dyn MaterialNode>>,
+	pub normal: ResourceId<Box<dyn MaterialNode>>,
 	pub roughness: ResourceId<Box<dyn MaterialNode>>,
 }
 
@@ -87,6 +88,9 @@ impl MaterialNode for BRDFNode {
 		);
 		pool.borrow(&self.desc.metallic).unwrap().collect_nodes(
 			pool, nodes, visited, self.desc.metallic,
+		);
+		pool.borrow(&self.desc.normal).unwrap().collect_nodes(
+			pool, nodes, visited, self.desc.normal,
 		);
 		pool.borrow(&self.desc.roughness).unwrap().collect_nodes(
 			pool, nodes, visited, self.desc.roughness,
@@ -123,14 +127,19 @@ impl MaterialNode for BRDFNode {
 
 		let base_color = pool.borrow(&self.desc.base_color).unwrap();
 		let metallic = pool.borrow(&self.desc.metallic).unwrap();
+		let normal = pool.borrow(&self.desc.normal).unwrap();
 		let roughness = pool.borrow(&self.desc.roughness).unwrap();
 
 		base_color.build_fragment_shader(pool, visited, self.desc.base_color.id) +
 		&metallic.build_fragment_shader(pool, visited, self.desc.metallic.id) +
+		&normal.build_fragment_shader(pool, visited, self.desc.normal.id) +
 		&roughness.build_fragment_shader(pool, visited, self.desc.roughness.id) +
-		&format!("let brdf_v_{} = normalize(in.view_dir);\n", self_id) +
+		&format!("let brdf_v_{} = normalize(in.view_position);\n", self_id) +
 		&format!("let brdf_l_{} = normalize(light_dir);\n", self_id) +
-		&format!("let brdf_n_{} = normalize(in.normal);\n", self_id) +
+		&format!("let brdf_n_{} = normalize({});\n",
+			self_id,
+			normal.get_fragment_output(self.desc.normal.id),
+		) +
 		&format!("let brdf_h_{} = normalize(brdf_l_{} + brdf_v_{});\n", self_id, self_id, self_id) +
 		&format!("let {} = brdf(brdf_v_{}, brdf_n_{}, brdf_h_{}, brdf_l_{}, {}, {}, {});\n",
 			self.get_fragment_output(self_id),

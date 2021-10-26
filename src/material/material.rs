@@ -18,7 +18,7 @@ const PREFIX_CHUNK1: &str = "struct VertexOutput {
   [[builtin(position)]] position: vec4<f32>;
   [[location(1)]] normal: vec3<f32>;
   [[location(2)]] uv: vec2<f32>;
-  [[location(3)]] view_dir: vec3<f32>;
+  [[location(3)]] view_position: vec3<f32>;
 };
 
 [[block]]
@@ -54,9 +54,8 @@ let PI: f32 = 3.1415926535;
 fn less_than_equal_f32(value1: f32, value2: f32) -> f32 {
   if (value1 <= value2) {
     return 1.0;
-  } else {
-    return 0.0;
   }
+  return 0.0;
 }
 
 fn less_than_equal_vec3_f32(value1: vec3<f32>, value2: vec3<f32>) -> vec3<f32> {
@@ -91,7 +90,7 @@ fn vs_main(
   out.position = camera.projection_matrix * mv_position;
   out.normal = normalize(object.normal_matrix * normal);
   out.uv = uv;
-  out.view_dir = normalize(-mv_position.xyz);
+  out.view_position = -mv_position.xyz;
   return out;
 }
 ";
@@ -101,14 +100,14 @@ const FRAGMENT_CHUNK1: &str = "
 fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
   var alpha = f32(1.0);
   let light_dir: vec3<f32> = normalize(vec3<f32>(0.0, 0.0, 1.0));
-  let light_color: vec3<f32> = vec3<f32>(1.0, 1.0, 1.0);
-  let light_factor = clamp(dot(normalize(in.normal), light_dir), 0.0, 1.0) * light_color;
   // @TODO: Fix me
   var use_directional_light = true;
 ";
 
 const FRAGMENT_CHUNK2: &str = "
   if (use_directional_light) {
+    let light_color: vec3<f32> = vec3<f32>(1.0, 1.0, 1.0);
+    let light_factor = clamp(dot(normalize(in.normal), light_dir), 0.0, 1.0) * light_color;
     color = color * light_factor.rgb;
   }
   return vec4<f32>(color, alpha);

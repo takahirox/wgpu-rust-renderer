@@ -14,10 +14,14 @@ use crate::{
 				BRDFNode,
 				BRDFNodeDescriptor,
 			},
+			const_float::ConstFloatNode,
 			float::FloatNode,
 			multiply::MultiplyNode,
 			node::MaterialNode,
+			normal::NormalNode,
 			srgb_to_linear::SRGBToLinearNode,
+			sub::SubNode,
+			tangent_to_object_normal::TangentToObjectNormalNode,
 			texture::TextureNode,
 			vector3::Vector3Node,
 			xyz::XYZNode,
@@ -101,6 +105,14 @@ fn parse_attribute(
 	} else {
 		panic!("Sparse accessor is not supported yet.");
 	}
+}
+
+fn parse_normal_texture_info(
+	pools: &mut ResourcePools,
+	path: &str,
+	info: &gltf::material::NormalTexture,
+) -> (ResourceId<Texture>, ResourceId<Sampler>) {
+	parse_texture(pools, path, &info.texture())
 }
 
 fn parse_index(
@@ -194,9 +206,8 @@ fn parse_sampler(
 fn parse_texture(
 	pools: &mut ResourcePools,
 	path: &str,
-	info: &gltf::texture::Info,
+	texture_def: &gltf::Texture,
 ) -> (ResourceId<Texture>, ResourceId<Sampler>) {
-	let texture_def = info.texture();
 	let source = texture_def.source();
 
 	use gltf::image::Source;
@@ -214,6 +225,14 @@ fn parse_texture(
 	};
 
 	(texture, parse_sampler(pools, &texture_def.sampler()))
+}
+
+fn parse_texture_info(
+	pools: &mut ResourcePools,
+	path: &str,
+	info: &gltf::texture::Info,
+) -> (ResourceId<Texture>, ResourceId<Sampler>) {
+	parse_texture(pools, path, &info.texture())
 }
 
 pub struct GltfLoader{
@@ -272,7 +291,7 @@ impl GltfLoader {
 					);
 
 					let base_color = if let Some(info) = pbr_metallic_roughness.base_color_texture() {
-						let (texture, sampler) = parse_texture(pools, path, &info);
+						let (texture, sampler) = parse_texture_info(pools, path, &info);
 
 						let texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
 							Box::new(TextureNode::new(texture, sampler)),
@@ -294,7 +313,7 @@ impl GltfLoader {
 					};
 
 					let (metallic, roughness) = if let Some(info) = pbr_metallic_roughness.metallic_roughness_texture() {
-						let (texture, sampler) = parse_texture(pools, path, &info);
+						let (texture, sampler) = parse_texture_info(pools, path, &info);
 
 						let texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
 							Box::new(TextureNode::new(texture, sampler)),
@@ -321,10 +340,47 @@ impl GltfLoader {
 						(metallic, roughness)
 					};
 
+					let normal = if let Some(info) = material_def.normal_texture() {
+						let (texture, sampler) = parse_normal_texture_info(pools, path, &info);
+
+						let texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+							Box::new(TextureNode::new(texture, sampler)),
+						);
+
+						let texture_rgb = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+							Box::new(XYZNode::new(texture_node)),
+						);
+
+						let const_2 = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+							Box::new(ConstFloatNode::new(2.0)),
+						);
+
+						let const_1 = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+							Box::new(ConstFloatNode::new(1.0)),
+						);
+
+						let multiply = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+							Box::new(MultiplyNode::new(texture_rgb, const_2)),
+						);
+
+						let sub = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+							Box::new(SubNode::new(multiply, const_1)),
+						);
+
+						pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+							Box::new(TangentToObjectNormalNode::new(sub)),
+						)
+					} else {
+						pools.borrow_mut::<Box<dyn MaterialNode>>().add(Box::new(
+							NormalNode::new()
+						))
+					};
+
 					let brdf = pools.borrow_mut::<Box<dyn MaterialNode>>().add(Box::new(
 						BRDFNode::new(BRDFNodeDescriptor {
 							base_color: base_color,
 							metallic: metallic,
+							normal: normal,
 							roughness: roughness,
 						}),
 					));
@@ -337,7 +393,7 @@ impl GltfLoader {
 					));
 
 					let emissive = if let Some(info) = material_def.emissive_texture() {
-						let (texture, sampler) = parse_texture(pools, path, &info);
+						let (texture, sampler) = parse_texture_info(pools, path, &info);
 
 						let texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
 							Box::new(TextureNode::new(texture, sampler)),

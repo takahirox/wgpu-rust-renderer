@@ -9,6 +9,7 @@ use crate::{
 			float::FloatNode,
 			multiply::MultiplyNode,
 			node::MaterialNode,
+			normal::NormalNode,
 			texture::TextureNode,
 			vector3::Vector3Node,
 			xyz::XYZNode,
@@ -87,9 +88,14 @@ impl MaterialHelper {
 			Box::new(FloatNode::new(roughness)),
 		);
 
+		let normal = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(NormalNode::new()),
+		);
+
 		let desc = BRDFNodeDescriptor {
 			base_color: base_color,
 			metallic: metallic,
+			normal: normal,
 			roughness: roughness,	
 		};
 

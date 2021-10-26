@@ -241,7 +241,7 @@ impl WGPUBinding {
 				has_dynamic_offset: false,
 				min_binding_size: wgpu::BufferSize::new((16 + 12) * 4),
 			},
-			visibility: wgpu::ShaderStages::VERTEX,
+			visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
 		});
 
 		entries.push(wgpu::BindGroupLayoutEntry {
