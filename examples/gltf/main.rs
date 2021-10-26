@@ -92,8 +92,16 @@ fn resize(
 fn update(
 	pools: &mut ResourcePools,
 	scene: &ResourceId<Scene>,
-	_objects: &Vec<ResourceId<Node>>,
+	objects: &Vec<ResourceId<Node>>,
 ) {
+	{
+		let node = pools.borrow_mut::<Node>().borrow_mut(&objects[0]).unwrap();
+		Vector3::add(
+			node.borrow_rotation_mut(),
+			&[0.0, 0.0, -0.01],
+		);
+	}
+
 	pools.borrow::<Scene>()
 		.borrow(scene)
 		.unwrap()
