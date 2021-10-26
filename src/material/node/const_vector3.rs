@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::{
 	material::node::node::{
 		MaterialNode,
@@ -22,33 +23,45 @@ impl ConstVector3Node {
 }
 
 impl MaterialNode for ConstVector3Node {
-	fn collect_nodes<'a> (
-		&'a self,
+	fn collect_nodes (
+		&self,
 		_pool: &ResourcePool<Box<dyn MaterialNode>>,
-		_nodes: &mut Vec<&'a ResourceId<Box<dyn MaterialNode>>>,
+		nodes: &mut Vec<ResourceId<Box<dyn MaterialNode>>>,
+		visited: &mut HashMap<ResourceId<Box<dyn MaterialNode>>, bool>,
+		self_rid: ResourceId<Box<dyn MaterialNode>>,
 	) {
+		if !visited.contains_key(&self_rid) {
+			visited.insert(self_rid, true);
+			nodes.push(self_rid);
+		}
 	}
 
 	fn borrow_contents(&self) -> Option<&UniformContents> {
 		None
 	}
 
-	fn build_declaration(&self) -> String {
+	fn build_declaration(&self, _self_id: usize) -> String {
 		format!("")
 	}
 
-	fn build_functions(&self) -> String {
+	fn build_functions(&self, _self_id: usize) -> String {
 		format!("")
 	}
 
 	fn build_fragment_shader(
 		&self,
 		_pool: &ResourcePool<Box<dyn MaterialNode>>,
+		_visited: &mut HashMap<usize, bool>,
+		_self_id: usize,
 	) -> String {
 		format!("")
 	}
 
-	fn get_fragment_output(&self) -> String {
-		format!("vec3<f32>({}, {}, {})", self.value[0], self.value[1], self.value[2])
+	fn get_fragment_output(&self, _self_id: usize) -> String {
+		format!("vec3<f32>({}, {}, {})",
+			self.value[0],
+			self.value[1],
+			self.value[2],
+		)
 	}
 }

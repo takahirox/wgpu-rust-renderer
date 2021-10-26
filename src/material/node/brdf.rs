@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::{
 	material::node::node::{
 		MaterialNode,
@@ -10,8 +11,6 @@ use crate::{
 };
 
 const FUNCTION_CHUNK: &str = "
-let PI: f32 = 3.1415926535;
-
 fn d_ggx(n_dot_h: f32, roughness: f32) -> f32 {
   let a: f32 = n_dot_h * roughness;
   let k: f32 = roughness / (1.0 - pow(n_dot_h, 2.0) + pow(a, 2.0));
@@ -56,7 +55,6 @@ fn brdf(
 ";
 
 pub struct BRDFNodeDescriptor {
-	pub label: String,
 	pub base_color: ResourceId<Box<dyn MaterialNode>>,
 	pub metallic: ResourceId<Box<dyn MaterialNode>>,
 	pub roughness: ResourceId<Box<dyn MaterialNode>>,
@@ -77,56 +75,78 @@ impl BRDFNode {
 }
 
 impl MaterialNode for BRDFNode {
-	fn collect_nodes<'a> (
-		&'a self,
-		pool: &'a ResourcePool<Box<dyn MaterialNode>>,
-		nodes: &mut Vec<&'a ResourceId<Box<dyn MaterialNode>>>,
+	fn collect_nodes (
+		&self,
+		pool: &ResourcePool<Box<dyn MaterialNode>>,
+		nodes: &mut Vec<ResourceId<Box<dyn MaterialNode>>>,
+		visited: &mut HashMap<ResourceId<Box<dyn MaterialNode>>, bool>,
+		self_rid: ResourceId<Box<dyn MaterialNode>>,
 	) {
-		pool.borrow(&self.desc.base_color).unwrap().collect_nodes(pool, nodes);
-		pool.borrow(&self.desc.metallic).unwrap().collect_nodes(pool, nodes);
-		pool.borrow(&self.desc.roughness).unwrap().collect_nodes(pool, nodes);
-		nodes.push(&self.desc.base_color);
-		nodes.push(&self.desc.metallic);
-		nodes.push(&self.desc.roughness);
+		pool.borrow(&self.desc.base_color).unwrap().collect_nodes(
+			pool, nodes, visited, self.desc.base_color,
+		);
+		pool.borrow(&self.desc.metallic).unwrap().collect_nodes(
+			pool, nodes, visited, self.desc.metallic,
+		);
+		pool.borrow(&self.desc.roughness).unwrap().collect_nodes(
+			pool, nodes, visited, self.desc.roughness,
+		);
+		if !visited.contains_key(&self_rid) {
+			visited.insert(self_rid, true);
+			nodes.push(self_rid);
+		}
 	}
 
 	fn borrow_contents(&self) -> Option<&UniformContents> {
 		None
 	}
 
-	fn build_declaration(&self) -> String {
+	fn build_declaration(&self, _self_id: usize) -> String {
 		format!("")
 	}
 
-	fn build_functions(&self) -> String {
+	fn build_functions(&self, _self_id: usize) -> String {
+		// @TODO: Add self_id suffix for unique function name
 		FUNCTION_CHUNK.to_string()
 	}
 
 	fn build_fragment_shader(
 		&self,
 		pool: &ResourcePool<Box<dyn MaterialNode>>,
+		visited: &mut HashMap<usize, bool>,
+		self_id: usize,
 	) -> String {
+		if visited.contains_key(&self_id) {
+			return "".to_string();
+		}
+		visited.insert(self_id, true);
+
 		let base_color = pool.borrow(&self.desc.base_color).unwrap();
 		let metallic = pool.borrow(&self.desc.metallic).unwrap();
 		let roughness = pool.borrow(&self.desc.roughness).unwrap();
 
-		base_color.build_fragment_shader(pool) +
-		&metallic.build_fragment_shader(pool) +
-		&roughness.build_fragment_shader(pool) +
-		&format!("let brdf_v = normalize(in.view_dir);\n") +
-		&format!("let brdf_l = normalize(light_dir);\n") +
-		&format!("let brdf_n = normalize(in.normal);\n") +
-		&format!("let brdf_h = normalize(brdf_l + brdf_v);\n") +
-		&format!("let brdf_output = brdf(brdf_v, brdf_n, brdf_h, brdf_l, {}, {}, {});\n",
-			base_color.get_fragment_output(),
-			metallic.get_fragment_output(),
-			roughness.get_fragment_output()
+		base_color.build_fragment_shader(pool, visited, self.desc.base_color.id) +
+		&metallic.build_fragment_shader(pool, visited, self.desc.metallic.id) +
+		&roughness.build_fragment_shader(pool, visited, self.desc.roughness.id) +
+		&format!("let brdf_v_{} = normalize(in.view_dir);\n", self_id) +
+		&format!("let brdf_l_{} = normalize(light_dir);\n", self_id) +
+		&format!("let brdf_n_{} = normalize(in.normal);\n", self_id) +
+		&format!("let brdf_h_{} = normalize(brdf_l_{} + brdf_v_{});\n", self_id, self_id, self_id) +
+		&format!("let {} = brdf(brdf_v_{}, brdf_n_{}, brdf_h_{}, brdf_l_{}, {}, {}, {});\n",
+			self.get_fragment_output(self_id),
+			self_id,
+			self_id,
+			self_id,
+			self_id,
+			base_color.get_fragment_output(self.desc.base_color.id),
+			metallic.get_fragment_output(self.desc.metallic.id),
+			roughness.get_fragment_output(self.desc.roughness.id)
 		) +
 		// @TODO: Fix me
 		&format!("use_directional_light = false;\n")
 	}
 
-	fn get_fragment_output(&self) -> String {
-		format!("brdf_output")
+	fn get_fragment_output(&self, self_id: usize) -> String {
+		format!("brdf_output_{}", self_id)
 	}
 }

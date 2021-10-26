@@ -192,44 +192,43 @@ impl WGPUBinding {
 					buffer_size += (align - (buffer_size % align)) % align;
 					buffer_size += get_byte(contents);
 				},
-				UniformContents::Texture {..} => {
-					entries.push(wgpu::BindGroupLayoutEntry {
-						binding: entries.len() as u32 + 3,
-						count: None,
-						ty: wgpu::BindingType::Texture {
-							multisampled: false,
-							sample_type: wgpu::TextureSampleType::Float {
-								filterable: true,
-							},
-							view_dimension: wgpu::TextureViewDimension::D2,
-						},
-						// @TODO: Fix me
-						visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-					});
-				},
+				UniformContents::Texture {..} => {},
 			};
 		}
 
-		// @TODO: Fix me. Loop twice is inefficient
-		for contents in material.borrow_contents(
+		for _texture in material.borrow_textures(
 			pools.borrow::<Box<dyn MaterialNode>>(),
 		).iter() {
-			match contents {
-				UniformContents::Texture {..} => {
-					entries.push(wgpu::BindGroupLayoutEntry {
-						binding: entries.len() as u32 + 3,
-						count: None,
-						// @TODO: Fix me if needed
-						ty: wgpu::BindingType::Sampler {
-							filtering: true,
-							comparison: false,
-						},
-						// @TODO: Fix me
-						visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-					});
+			entries.push(wgpu::BindGroupLayoutEntry {
+				binding: entries.len() as u32 + 3,
+				count: None,
+				ty: wgpu::BindingType::Texture {
+					multisampled: false,
+					sample_type: wgpu::TextureSampleType::Float {
+						filterable: true,
+					},
+					view_dimension: wgpu::TextureViewDimension::D2,
 				},
-				_ => {},
-			};
+				// @TODO: Fix me
+				visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+			});
+		}
+
+		// @TODO: Fix me. Loop twice is inefficient
+		for _sampler in material.borrow_samplers(
+			pools.borrow::<Box<dyn MaterialNode>>(),
+		).iter() {
+			entries.push(wgpu::BindGroupLayoutEntry {
+				binding: entries.len() as u32 + 3,
+				count: None,
+				// @TODO: Fix me if needed
+				ty: wgpu::BindingType::Sampler {
+					filtering: true,
+					comparison: false,
+				},
+				// @TODO: Fix me
+				visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+			});
 		}
 
 		buffer_size += (max_align - (buffer_size % max_align)) % max_align;

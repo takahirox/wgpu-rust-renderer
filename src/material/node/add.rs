@@ -10,24 +10,24 @@ use crate::{
 	},
 };
 
-pub struct MultiplyNode {
+pub struct AddNode {
 	value1: ResourceId<Box<dyn MaterialNode>>,
 	value2: ResourceId<Box<dyn MaterialNode>>,
 }
 
-impl MultiplyNode {
+impl AddNode {
 	pub fn new(
 		value1: ResourceId<Box<dyn MaterialNode>>,
 		value2: ResourceId<Box<dyn MaterialNode>>,
 	) -> Self {
-		MultiplyNode {
+		AddNode {
 			value1: value1,
 			value2: value2,
 		}
 	}
 }
 
-impl MaterialNode for MultiplyNode {
+impl MaterialNode for AddNode {
 	fn collect_nodes (
 		&self,
 		pool: &ResourcePool<Box<dyn MaterialNode>>,
@@ -75,7 +75,7 @@ impl MaterialNode for MultiplyNode {
 
 		value1.build_fragment_shader(pool, visited, self.value1.id) +
 		&value2.build_fragment_shader(pool, visited, self.value2.id) +
-		&format!("let {} = {} * {};\n",
+		&format!("let {} = {} + {};\n",
 			self.get_fragment_output(self_id),
 			value1.get_fragment_output(self.value1.id),
 			value2.get_fragment_output(self.value2.id),
@@ -83,6 +83,6 @@ impl MaterialNode for MultiplyNode {
 	}
 
 	fn get_fragment_output(&self, self_id: usize) -> String {
-		format!("multiply_output_{}", self_id)
+		format!("add_output_{}", self_id)
 	}
 }

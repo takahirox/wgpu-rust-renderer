@@ -33,7 +33,6 @@ impl MaterialHelper {
 	) -> ResourceId<Material> {
 		let color_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
 			Box::new(Vector3Node::new(
-				"color",
 				*Color::copy(&mut Color::create(), color),
 			)),
 		);
@@ -48,14 +47,13 @@ impl MaterialHelper {
 	) -> ResourceId<Material> {
 		let color = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
 			Box::new(Vector3Node::new(
-				"color",
 				*Color::copy(&mut Color::create(), color),
 			),
 		));
 
 		let sampler = TextureLoader::create_default_sampler(pools);
 		let texture = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-			Box::new(TextureNode::new("color", texture, sampler)),
+			Box::new(TextureNode::new(texture, sampler)),
 		);
 
 		let texture_rgb = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
@@ -77,21 +75,19 @@ impl MaterialHelper {
 	) -> ResourceId<Material> {
 		let base_color = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
 			Box::new(Vector3Node::new(
-				"color",
 				*Color::copy(&mut Color::create(), color),
 			)),
 		);
 
 		let metallic = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-			Box::new(FloatNode::new("metallic", metallic)),
+			Box::new(FloatNode::new(metallic)),
 		);
 
 		let roughness = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-			Box::new(FloatNode::new("roughness", roughness)),
+			Box::new(FloatNode::new(roughness)),
 		);
 
 		let desc = BRDFNodeDescriptor {
-			label: "brdf".to_string(),
 			base_color: base_color,
 			metallic: metallic,
 			roughness: roughness,	

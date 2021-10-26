@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::{
 	resource::resource::{
 		ResourceId,
@@ -20,19 +21,23 @@ pub enum UniformContents {
 }
 
 pub trait MaterialNode {
-	fn collect_nodes<'a> (
-		&'a self,
-		pool: &'a ResourcePool<Box<dyn MaterialNode>>,
-		nodes: &mut Vec<&'a ResourceId<Box<dyn MaterialNode>>>,
+	fn collect_nodes (
+		&self,
+		pool: &ResourcePool<Box<dyn MaterialNode>>,
+		nodes: &mut Vec<ResourceId<Box<dyn MaterialNode>>>,
+		visited: &mut HashMap<ResourceId<Box<dyn MaterialNode>>, bool>,
+		self_rid: ResourceId<Box<dyn MaterialNode>>,
 	);
 	fn borrow_contents(&self) -> Option<&UniformContents>;
-	fn build_declaration(&self) -> String;
-	fn build_functions(&self) -> String;
+	fn build_declaration(&self, self_id: usize) -> String;
+	fn build_functions(&self, self_id: usize) -> String;
 	fn build_fragment_shader(
 		&self,
 		pool: &ResourcePool<Box<dyn MaterialNode>>,
+		visited: &mut HashMap<usize, bool>,
+		self_id: usize,
 	) -> String;
-	fn get_fragment_output(&self) -> String;
+	fn get_fragment_output(&self, self_id: usize) -> String;
 }
 
 // @TODO: Ensure unique variable names

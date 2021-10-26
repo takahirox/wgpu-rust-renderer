@@ -48,6 +48,37 @@ var<uniform> camera: Camera;
 var<uniform> unif: Uniform;
 ";
 
+const PREFIX_CHUNK3: &str = "
+let PI: f32 = 3.1415926535;
+
+fn less_than_equal_f32(value1: f32, value2: f32) -> f32 {
+  if (value1 <= value2) {
+    return 1.0;
+  } else {
+    return 0.0;
+  }
+}
+
+fn less_than_equal_vec3_f32(value1: vec3<f32>, value2: vec3<f32>) -> vec3<f32> {
+  return vec3<f32>(
+    less_than_equal_f32(value1.x, value2.x),
+    less_than_equal_f32(value1.y, value2.y),
+    less_than_equal_f32(value1.z, value2.z)
+  );
+}
+
+fn srgb_to_linear(value: vec4<f32>) -> vec4<f32> {
+  return vec4<f32>(
+    mix(
+      pow(value.rgb * 0.9478672986 + vec3<f32>(0.0521327014), vec3<f32>(2.4)),
+      value.rgb * 0.0773993808,
+      less_than_equal_vec3_f32(value.rgb, vec3<f32>(0.04045))
+    ),
+    value.a
+  );
+}
+";
+
 const VERTEX_CHUNK: &str = "
 [[stage(vertex)]]
 fn vs_main(
@@ -96,19 +127,24 @@ impl Material {
 	}
 
 	// @TODO: Optimize?
-	fn borrow_nodes<'a>(
-		&'a self,
-		pool: &'a ResourcePool<Box<dyn MaterialNode>>,
-	) -> Vec<&'a ResourceId<Box<dyn MaterialNode>>> {
+	fn borrow_nodes(
+		&self,
+		pool: &ResourcePool<Box<dyn MaterialNode>>,
+	) -> Vec<ResourceId<Box<dyn MaterialNode>>> {
 		let mut nodes = Vec::new();
-		pool.borrow(&self.color).unwrap().collect_nodes(pool, &mut nodes);
-		nodes.push(&self.color);
+		let mut visited = HashMap::new();
+		pool.borrow(&self.color).unwrap().collect_nodes(
+			pool,
+			&mut nodes,
+			&mut visited,
+			self.color,
+		);
 		nodes
 	}
 
 	// @TODO: Optimize?
 	pub fn borrow_contents<'a>(
-		&'a self,
+		&self,
 		pool: &'a ResourcePool<Box<dyn MaterialNode>>,
 	) -> Vec<&'a UniformContents> {
 		let mut contents = Vec::<>::new();
@@ -182,6 +218,7 @@ impl Material {
 		&self.build_uniform_block_declaration(pool) +
 		PREFIX_CHUNK2 +
 		&self.build_texture_declaration(pool) +
+		PREFIX_CHUNK3 +
 		&self.build_functions(pool)
 	}
 
@@ -193,11 +230,12 @@ impl Material {
 		&self,
 		pool: &ResourcePool<Box<dyn MaterialNode>>,
 	) -> String {
+		let mut visited = HashMap::new();
 		let color = pool.borrow(&self.color).unwrap();
 
 		FRAGMENT_CHUNK1.to_string() +
-		&color.build_fragment_shader(pool) +
-		&format!("var color: vec3<f32> = {};\n", color.get_fragment_output()) +
+		&color.build_fragment_shader(pool, &mut visited, self.color.id) +
+		&format!("var color: vec3<f32> = {};\n", color.get_fragment_output(self.color.id)) +
 		&FRAGMENT_CHUNK2.to_string()
 	}
 
@@ -208,13 +246,13 @@ impl Material {
 	) -> String {
 		// bindings for textures start with 3
 		let mut s = "".to_string();
-		for node in self.borrow_nodes(pool).iter() {
-			let node = pool.borrow(node).unwrap();
+		for node_id in self.borrow_nodes(pool).iter() {
+			let node = pool.borrow(node_id).unwrap();
 			if let Some(contents) = node.borrow_contents() {
 				match contents {
 					UniformContents::Texture {..} => {},
 					_ => {
-						s += &node.build_declaration();
+						s += &node.build_declaration(node_id.id);
 					},
 				}
 			}
@@ -252,8 +290,8 @@ impl Material {
 		pool: &ResourcePool<Box<dyn MaterialNode>>,
 	) -> String {
 		let mut s = "".to_string();
-		for node in self.borrow_nodes(pool).iter() {
-			s += &pool.borrow(node).unwrap().build_functions();
+		for node_id in self.borrow_nodes(pool).iter() {
+			s += &pool.borrow(node_id).unwrap().build_functions(node_id.id);
 		}
 		s
 	}

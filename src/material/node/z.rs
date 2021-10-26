@@ -10,36 +10,30 @@ use crate::{
 	},
 };
 
-pub struct MultiplyNode {
-	value1: ResourceId<Box<dyn MaterialNode>>,
-	value2: ResourceId<Box<dyn MaterialNode>>,
+pub struct ZNode {
+	node: ResourceId<Box<dyn MaterialNode>>,
 }
 
-impl MultiplyNode {
+impl ZNode {
 	pub fn new(
-		value1: ResourceId<Box<dyn MaterialNode>>,
-		value2: ResourceId<Box<dyn MaterialNode>>,
+		node: ResourceId<Box<dyn MaterialNode>>,
 	) -> Self {
-		MultiplyNode {
-			value1: value1,
-			value2: value2,
+		ZNode {
+			node: node,
 		}
 	}
 }
 
-impl MaterialNode for MultiplyNode {
-	fn collect_nodes (
+impl MaterialNode for ZNode {
+	fn collect_nodes<'a> (
 		&self,
 		pool: &ResourcePool<Box<dyn MaterialNode>>,
 		nodes: &mut Vec<ResourceId<Box<dyn MaterialNode>>>,
 		visited: &mut HashMap<ResourceId<Box<dyn MaterialNode>>, bool>,
 		self_rid: ResourceId<Box<dyn MaterialNode>>,
 	) {
-		pool.borrow(&self.value1).unwrap().collect_nodes(
-			pool, nodes, visited, self.value1,
-		);
-		pool.borrow(&self.value2).unwrap().collect_nodes(
-			pool, nodes, visited, self.value2,
+		pool.borrow(&self.node).unwrap().collect_nodes(
+			pool, nodes, visited, self.node,
 		);
 		if !visited.contains_key(&self_rid) {
 			visited.insert(self_rid, true);
@@ -70,19 +64,16 @@ impl MaterialNode for MultiplyNode {
 		}
 		visited.insert(self_id, true);
 
-		let value1 = pool.borrow(&self.value1).unwrap();
-		let value2 = pool.borrow(&self.value2).unwrap();
+		let node = pool.borrow(&self.node).unwrap();
 
-		value1.build_fragment_shader(pool, visited, self.value1.id) +
-		&value2.build_fragment_shader(pool, visited, self.value2.id) +
-		&format!("let {} = {} * {};\n",
+		node.build_fragment_shader(pool, visited, self.node.id) +
+		&format!("let {} = {}.z;\n",
 			self.get_fragment_output(self_id),
-			value1.get_fragment_output(self.value1.id),
-			value2.get_fragment_output(self.value2.id),
+			node.get_fragment_output(self.node.id),
 		)
 	}
 
 	fn get_fragment_output(&self, self_id: usize) -> String {
-		format!("multiply_output_{}", self_id)
+		format!("z_output_{}", self_id)
 	}
 }

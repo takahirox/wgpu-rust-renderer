@@ -1,9 +1,14 @@
+pub mod add;
 pub mod brdf;
 pub mod const_float;
 pub mod const_vector3;
 pub mod float;
 pub mod multiply;
 pub mod node;
+pub mod srgb_to_linear;
 pub mod texture;
 pub mod vector3;
 pub mod xyz;
+pub mod x;
+pub mod y;
+pub mod z;

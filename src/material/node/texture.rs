@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::{
 	material::node::node::{
 		MaterialNode,
@@ -15,12 +16,10 @@ use crate::{
 
 pub struct TextureNode {
 	contents: UniformContents,
-	_label: String,
 }
 
 impl TextureNode {
 	pub fn new(
-		label: &str,
 		texture: ResourceId<Texture>,
 		sampler: ResourceId<Sampler>,
 	) -> Self {
@@ -29,7 +28,6 @@ impl TextureNode {
 				sampler: sampler,
 				texture: texture,
 			},
-			_label: label.to_string(),
 		}
 	}
 
@@ -50,47 +48,53 @@ impl TextureNode {
 			_ => panic!(),		
 		}
 	}
-
-	fn get_prefix(&self) -> String {
-		match self.contents {
-			UniformContents::Texture{sampler, texture} => {
-				format!("texture_{}_{}", texture.id, sampler.id)
-			},
-			_ => panic!(),		
-		}
-	}
 }
 
 impl MaterialNode for TextureNode {
-	fn collect_nodes<'a> (
-		&'a self,
+	fn collect_nodes (
+		&self,
 		_pool: &ResourcePool<Box<dyn MaterialNode>>,
-		_nodes: &mut Vec<&'a ResourceId<Box<dyn MaterialNode>>>) {
+		nodes: &mut Vec<ResourceId<Box<dyn MaterialNode>>>,
+		visited: &mut HashMap<ResourceId<Box<dyn MaterialNode>>, bool>,
+		self_rid: ResourceId<Box<dyn MaterialNode>>,
+	) {
+		if !visited.contains_key(&self_rid) {
+			visited.insert(self_rid, true);
+			nodes.push(self_rid);
+		}
 	}
 
 	fn borrow_contents(&self) -> Option<&UniformContents> {
 		Some(&self.contents)
 	}
 
-	fn build_declaration(&self) -> String {
+	fn build_declaration(&self, _self_id: usize) -> String {
 		format!("")
 	}
 
-	fn build_functions(&self) -> String {
+	fn build_functions(&self, _self_id: usize) -> String {
 		format!("")
 	}
 
 	fn build_fragment_shader(
 		&self,
 		_pool: &ResourcePool<Box<dyn MaterialNode>>,
+		visited: &mut HashMap<usize, bool>,
+		self_id: usize,
 	) -> String {
-		format!("let {}_output = textureSample({}, {}, in.uv);\n",
-			self.get_prefix(),
+		if visited.contains_key(&self_id) {
+			return "".to_string();
+		}
+		visited.insert(self_id, true);
+
+		format!("let {} = textureSample({}, {}, in.uv);\n",
+			self.get_fragment_output(self_id),
 			self.get_texture_name(),
-			self.get_sampler_name())
+			self.get_sampler_name(),
+		)
 	}
 
-	fn get_fragment_output(&self) -> String {
-		format!("{}_output", self.get_prefix())
+	fn get_fragment_output(&self, self_id: usize) -> String {
+		format!("texture_output_{}", self_id)
 	}
 }
