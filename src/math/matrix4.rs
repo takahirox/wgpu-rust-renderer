@@ -1,3 +1,8 @@
+use crate::math::{
+	quaternion::Quaternion,
+	vector3::Vector3,
+};
+
 const ELEMENT_NUM: usize = 16;
 type Elements = [f32; ELEMENT_NUM];
 
@@ -34,6 +39,16 @@ impl Matrix4 {
 	pub fn copy<'a>(m: &'a mut Elements, src: &'a Elements) -> &'a mut Elements {
 		for i in 0..ELEMENT_NUM {
 			m[i] = src[i];
+		}
+		m
+	}
+
+	// Good name?
+	pub fn set_from_2d_array<'a>(m: &'a mut Elements, src: &'a [[f32; 4]; 4]) -> &'a mut Elements {
+		for i in 0..4 {
+			for j in 0..4 {
+				m[i * 4 + j] = src[j][i];
+			}
 		}
 		m
 	}
@@ -210,6 +225,104 @@ impl Matrix4 {
 		m[15] = 1.0;
 
 		m
+	}
+
+	pub fn decompose<'a>(
+		position: &mut [f32; 3],
+		quaternion: &mut [f32; 4],
+		scale: &mut [f32; 3],
+		m: &Elements,
+	) {
+		let mut v = Vector3::create();
+		let sx = Vector3::length(Vector3::set(&mut v, m[0], m[1], m[2]));
+		let sy = Vector3::length(Vector3::set(&mut v, m[4], m[5], m[6]));
+		let sz = Vector3::length(Vector3::set(&mut v, m[8], m[9], m[10]));
+
+		let sx = match Matrix4::determinant(m) < 0.0 {
+			true => -sx,
+			false => sx,
+		};
+
+		position[0] = m[12];
+		position[1] = m[13];
+		position[2] = m[14];
+
+		let inv_sx = 1.0 / sx;
+		let inv_sy = 1.0 / sy;
+		let inv_sz = 1.0 / sz;
+
+		let mut m2 = Self::create();
+		Self::copy(&mut m2, m);
+
+		m2[0] *= inv_sx;
+		m2[1] *= inv_sx;
+		m2[2] *= inv_sx;
+
+		m2[4] *= inv_sy;
+		m2[5] *= inv_sy;
+		m2[6] *= inv_sy;
+
+		m2[8] *= inv_sz;
+		m2[9] *= inv_sz;
+		m2[10] *= inv_sz;
+
+		Quaternion::set_from_rotation_matrix(quaternion, &m2);
+
+		scale[0] = sx;
+		scale[1] = sy;
+		scale[2] = sz;
+	}
+
+	pub fn determinant(m: &Elements) -> f32 {
+		let n11 = m[0];
+		let n12 = m[4];
+		let n13 = m[8];
+		let n14 = m[12];
+		let n21 = m[1];
+		let n22 = m[5];
+		let n23 = m[9];
+		let n24 = m[13];
+		let n31 = m[2];
+		let n32 = m[6];
+		let n33 = m[10];
+		let n34 = m[14];
+		let n41 = m[3];
+		let n42 = m[7];
+		let n43 = m[11];
+		let n44 = m[15];
+
+		n41 * (
+			n14 * n23 * n32
+			- n13 * n24 * n32
+			- n14 * n22 * n33
+			+ n12 * n24 * n33
+			+ n13 * n22 * n34
+			- n12 * n23 * n34
+		) +
+		n42 * (
+			n11 * n23 * n34
+			- n11 * n24 * n33
+			+ n14 * n21 * n33
+			- n13 * n21 * n34
+			+ n13 * n24 * n31
+			- n14 * n23 * n31
+		) +
+		n43 * (
+			n11 * n24 * n32
+			- n11 * n22 * n34
+			- n14 * n21 * n32
+			+ n12 * n21 * n34
+			+ n14 * n22 * n31
+			- n12 * n24 * n31
+		) +
+		n44 * (
+			n13 * n22 * n31
+			- n11 * n23 * n32
+			+ n11 * n22 * n33
+			+ n13 * n21 * n32
+			- n12 * n21 * n33
+			+ n12 * n23 * n31
+		)
 	}
 
 	pub fn make_perspective(

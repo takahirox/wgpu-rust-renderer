@@ -29,6 +29,11 @@ use crate::{
 			z::ZNode,
 		},
 	},
+	math::{
+		euler::Euler,
+		matrix4::Matrix4,
+		vector3::Vector3,
+	},
 	resource::resource::{
 		ResourceId,
 		ResourcePools,
@@ -107,6 +112,237 @@ fn parse_attribute(
 	}
 }
 
+fn parse_geometry(
+	pools: &mut ResourcePools,
+	path: &str,
+	primitive_def: &gltf::Primitive,
+) -> ResourceId<Geometry> {
+	let mut geometry = Geometry::new();
+
+	for attribute_def in primitive_def.attributes() {
+		let (name, attribute) = parse_attribute(pools, path, &attribute_def);
+		geometry.set_attribute(&name, attribute);
+	}
+
+	if let Some(accessor) = primitive_def.indices() {
+		let index = parse_index(pools, path, &accessor);
+		geometry.set_index(index);
+	}
+
+	pools.borrow_mut::<Geometry>().add(geometry)
+}
+
+fn parse_material(
+	pools: &mut ResourcePools,
+	path: &str,
+	material_def: &gltf::Material,
+) -> ResourceId<Material> {
+	let pbr_metallic_roughness = material_def.pbr_metallic_roughness();
+
+	// Base color
+
+	let base_color_factor = pbr_metallic_roughness.base_color_factor();
+
+	let base_color = pools.borrow_mut::<Box<dyn MaterialNode>>().add(Box::new(
+		Vector3Node::new(
+			[base_color_factor[0], base_color_factor[1], base_color_factor[2]],
+		),
+	));
+
+	let base_color = if let Some(info) = pbr_metallic_roughness.base_color_texture() {
+		let (texture, sampler) = parse_texture_info(pools, path, &info);
+
+		let texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(TextureNode::new(texture, sampler)),
+		);
+
+		let linear_texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(SRGBToLinearNode::new(texture_node)),
+		);
+
+		let texture_rgb = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(XYZNode::new(linear_texture_node)),
+		);
+
+		pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(MultiplyNode::new(base_color, texture_rgb))
+		)
+	} else {
+		base_color
+	};
+
+	// Metallic/Roughness
+
+	let metallic_factor = pbr_metallic_roughness.metallic_factor();
+	let roughness_factor = pbr_metallic_roughness.roughness_factor();
+
+	let metallic = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+		Box::new(FloatNode::new(metallic_factor)),
+	);
+
+	let roughness = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+		Box::new(FloatNode::new(roughness_factor)),
+	);
+
+	let (metallic, roughness) = if let Some(info) = pbr_metallic_roughness.metallic_roughness_texture() {
+		let (texture, sampler) = parse_texture_info(pools, path, &info);
+
+		let texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(TextureNode::new(texture, sampler)),
+		);
+
+		let texture_g = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(YNode::new(texture_node)),
+		);
+
+		let texture_b = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(ZNode::new(texture_node)),
+		);
+
+		let metallic = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(MultiplyNode::new(metallic, texture_b)),
+		);
+
+		let roughness = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(MultiplyNode::new(roughness, texture_g)),
+		);
+
+		(metallic, roughness)
+	} else {
+		(metallic, roughness)
+	};
+
+	// Normal
+
+	let normal = if let Some(info) = material_def.normal_texture() {
+		let (texture, sampler) = parse_normal_texture_info(pools, path, &info);
+
+		let texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(TextureNode::new(texture, sampler)),
+		);
+
+		let texture_rgb = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(XYZNode::new(texture_node)),
+		);
+
+		let const_2 = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(ConstFloatNode::new(2.0)),
+		);
+
+		let const_1 = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(ConstFloatNode::new(1.0)),
+		);
+
+		let multiply = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(MultiplyNode::new(texture_rgb, const_2)),
+		);
+
+		let sub = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(SubNode::new(multiply, const_1)),
+		);
+
+		pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(TangentToObjectNormalNode::new(sub)),
+		)
+	} else {
+		pools.borrow_mut::<Box<dyn MaterialNode>>().add(Box::new(
+			NormalNode::new()
+		))
+	};
+
+	// BRDF
+
+	let brdf = pools.borrow_mut::<Box<dyn MaterialNode>>().add(Box::new(
+		BRDFNode::new(BRDFNodeDescriptor {
+			base_color: base_color,
+			metallic: metallic,
+			normal: normal,
+			roughness: roughness,
+		}),
+	));
+
+	// Emissive
+
+	let emissive_factor = material_def.emissive_factor();
+	let emissive = pools.borrow_mut::<Box<dyn MaterialNode>>().add(Box::new(
+		Vector3Node::new(
+			[emissive_factor[0], emissive_factor[1], emissive_factor[2]],
+		),
+	));
+
+	let emissive = if let Some(info) = material_def.emissive_texture() {
+		let (texture, sampler) = parse_texture_info(pools, path, &info);
+
+		let texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(TextureNode::new(texture, sampler)),
+		);
+
+		let linear_texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(SRGBToLinearNode::new(texture_node)),
+		);
+
+		let texture_rgb = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(XYZNode::new(linear_texture_node)),
+		);
+
+		pools.borrow_mut::<Box<dyn MaterialNode>>().add(
+			Box::new(MultiplyNode::new(emissive, texture_rgb))
+		)
+	} else {
+		emissive
+	};
+
+	let add = pools.borrow_mut::<Box<dyn MaterialNode>>().add(Box::new(
+		AddNode::new(
+			brdf,
+			emissive,
+		),
+	));
+
+	pools.borrow_mut::<Material>().add(Material::new(add))
+}
+
+fn parse_node(
+	pools: &mut ResourcePools,
+	scene: &ResourceId<Scene>,
+	path: &str,
+	node_def: &gltf::Node,
+) -> ResourceId<Node> {
+	let mut node = Node::new();
+
+	match node_def.transform() {
+		gltf::scene::Transform::Matrix {
+			matrix,
+		} => {
+			let mut matrix2 = Matrix4::create();
+			let matrix = Matrix4::set_from_2d_array(&mut matrix2, &matrix);
+			node.set_matrix(&matrix);
+		},
+		gltf::scene::Transform::Decomposed {
+			translation,
+			rotation,
+			scale,
+		} => {
+			Vector3::copy(node.borrow_position_mut(), &translation);
+			Euler::set_from_quaternion(node.borrow_rotation_mut(), &rotation);
+			Vector3::copy(node.borrow_scale_mut(), &scale);
+			node.update_matrix();
+		},
+	};
+
+	let node = pools.borrow_mut::<Node>().add(Node::new());
+
+	if let Some(mesh_def) = node_def.mesh() {
+		for primitive_def in mesh_def.primitives() {
+			let (geometry, material) = parse_primitive(pools, path, &primitive_def);
+			let mesh = pools.borrow_mut::<Mesh>().add(Mesh::new(geometry, material));
+			pools.borrow_mut::<Scene>().borrow_mut(scene).unwrap().assign(&node, &mesh);
+		}
+	}
+
+	node
+}
+
 fn parse_normal_texture_info(
 	pools: &mut ResourcePools,
 	path: &str,
@@ -150,6 +386,17 @@ fn parse_index(
 	} else {
 		panic!("Sparse accessor is not supported yet.");
 	}
+}
+
+fn parse_primitive(
+	pools: &mut ResourcePools,
+	path: &str,
+	primitive_def: &gltf::Primitive,
+) -> (ResourceId<Geometry>, ResourceId<Material>) {
+	(
+		parse_geometry(pools, path, primitive_def),
+		parse_material(pools, path, &primitive_def.material())
+	)
 }
 
 fn parse_sampler(
@@ -252,182 +499,7 @@ impl GltfLoader {
 
 		let scene_def = gltf.default_scene().unwrap();
 		for node_def in scene_def.nodes() {
-			let node = pools.borrow_mut::<Node>().add(Node::new());
-			if let Some(mesh) = node_def.mesh() {
-				for primitive in mesh.primitives() {
-					let mut geometry = Geometry::new();
-
-					for attribute_def in primitive.attributes() {
-						let (name, attribute) = parse_attribute(pools, path, &attribute_def);
-						geometry.set_attribute(&name, attribute);
-					}
-
-					if let Some(accessor) = primitive.indices() {
-						let index = parse_index(pools, path, &accessor);
-						geometry.set_index(index);
-					}
-
-					let geometry = pools.borrow_mut::<Geometry>().add(geometry);
-
-					let material_def = primitive.material();
-					let pbr_metallic_roughness = material_def.pbr_metallic_roughness();
-
-					let base_color_factor = pbr_metallic_roughness.base_color_factor();
-					let metallic_factor = pbr_metallic_roughness.metallic_factor();
-					let roughness_factor = pbr_metallic_roughness.roughness_factor();
-
-					let base_color = pools.borrow_mut::<Box<dyn MaterialNode>>().add(Box::new(
-						Vector3Node::new(
-							[base_color_factor[0], base_color_factor[1], base_color_factor[2]],
-						),
-					));
-
-					let metallic = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-						Box::new(FloatNode::new(metallic_factor)),
-					);
-
-					let roughness = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-						Box::new(FloatNode::new(roughness_factor)),
-					);
-
-					let base_color = if let Some(info) = pbr_metallic_roughness.base_color_texture() {
-						let (texture, sampler) = parse_texture_info(pools, path, &info);
-
-						let texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(TextureNode::new(texture, sampler)),
-						);
-
-						let linear_texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(SRGBToLinearNode::new(texture_node)),
-						);
-
-						let texture_rgb = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(XYZNode::new(linear_texture_node)),
-						);
-
-						pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(MultiplyNode::new(base_color, texture_rgb))
-						)
-					} else {
-						base_color
-					};
-
-					let (metallic, roughness) = if let Some(info) = pbr_metallic_roughness.metallic_roughness_texture() {
-						let (texture, sampler) = parse_texture_info(pools, path, &info);
-
-						let texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(TextureNode::new(texture, sampler)),
-						);
-
-						let texture_g = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(YNode::new(texture_node)),
-						);
-
-						let texture_b = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(ZNode::new(texture_node)),
-						);
-
-						let metallic = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(MultiplyNode::new(metallic, texture_b)),
-						);
-
-						let roughness = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(MultiplyNode::new(roughness, texture_g)),
-						);
-
-						(metallic, roughness)
-					} else {
-						(metallic, roughness)
-					};
-
-					let normal = if let Some(info) = material_def.normal_texture() {
-						let (texture, sampler) = parse_normal_texture_info(pools, path, &info);
-
-						let texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(TextureNode::new(texture, sampler)),
-						);
-
-						let texture_rgb = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(XYZNode::new(texture_node)),
-						);
-
-						let const_2 = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(ConstFloatNode::new(2.0)),
-						);
-
-						let const_1 = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(ConstFloatNode::new(1.0)),
-						);
-
-						let multiply = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(MultiplyNode::new(texture_rgb, const_2)),
-						);
-
-						let sub = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(SubNode::new(multiply, const_1)),
-						);
-
-						pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(TangentToObjectNormalNode::new(sub)),
-						)
-					} else {
-						pools.borrow_mut::<Box<dyn MaterialNode>>().add(Box::new(
-							NormalNode::new()
-						))
-					};
-
-					let brdf = pools.borrow_mut::<Box<dyn MaterialNode>>().add(Box::new(
-						BRDFNode::new(BRDFNodeDescriptor {
-							base_color: base_color,
-							metallic: metallic,
-							normal: normal,
-							roughness: roughness,
-						}),
-					));
-
-					let emissive_factor = material_def.emissive_factor();
-					let emissive = pools.borrow_mut::<Box<dyn MaterialNode>>().add(Box::new(
-						Vector3Node::new(
-							[emissive_factor[0], emissive_factor[1], emissive_factor[2]],
-						),
-					));
-
-					let emissive = if let Some(info) = material_def.emissive_texture() {
-						let (texture, sampler) = parse_texture_info(pools, path, &info);
-
-						let texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(TextureNode::new(texture, sampler)),
-						);
-
-						let linear_texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(SRGBToLinearNode::new(texture_node)),
-						);
-
-						let texture_rgb = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(XYZNode::new(linear_texture_node)),
-						);
-
-						pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-							Box::new(MultiplyNode::new(emissive, texture_rgb))
-						)
-					} else {
-						emissive
-					};
-
-					let add = pools.borrow_mut::<Box<dyn MaterialNode>>().add(Box::new(
-						AddNode::new(
-							brdf,
-							emissive,
-						),
-					));
-
-					let material = pools.borrow_mut::<Material>().add(Material::new(add));
-					let mesh = pools.borrow_mut::<Mesh>().add(Mesh::new(geometry, material));
-
-					pools.borrow_mut::<Scene>().borrow_mut(scene).unwrap().assign(&node, &mesh);
-				}
-			}
-			nodes.push(node);
+			nodes.push(parse_node(pools, scene, path, &node_def));
 		}
 		nodes
 	}

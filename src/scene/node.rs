@@ -56,12 +56,19 @@ impl Node {
 		&self.scale
 	}
 
+	pub fn borrow_scale_mut(&mut self) -> &mut [f32; 3] {
+		&mut self.scale
+	}
+
 	pub fn borrow_matrix(&self) -> &[f32; 16] {
 		&self.matrix
 	}
 
-	pub fn borrow_matrix_mut(&mut self) -> &mut [f32; 16] {
-		&mut self.matrix
+	pub fn set_matrix(&mut self, matrix: &[f32; 16]) -> &mut Self {
+		Matrix4::copy(&mut self.matrix, matrix);
+		Matrix4::decompose(&mut self.position, &mut self.quaternion, &mut self.scale, &self.matrix);
+		Euler::set_from_quaternion(&mut self.rotation, &self.quaternion);
+		self
 	}
 
 	pub fn update_matrix(&mut self) -> &mut Self {
