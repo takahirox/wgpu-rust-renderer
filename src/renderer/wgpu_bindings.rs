@@ -105,9 +105,9 @@ impl WGPUBinding {
 		let mut camera_matrix_inverse = Matrix4::create();
 		let mut normal_matrix = Matrix3::create();
 		let mut normal_matrix_gpu = Matrix3GPU::create();
-		Matrix4::copy(&mut camera_matrix_inverse, camera_node.borrow_matrix());
+		Matrix4::copy(&mut camera_matrix_inverse, camera_node.borrow_world_matrix());
 		Matrix4::invert(&mut camera_matrix_inverse);
-		Matrix4::multiply(&mut model_view_matrix, &camera_matrix_inverse, node.borrow_matrix());
+		Matrix4::multiply(&mut model_view_matrix, &camera_matrix_inverse, node.borrow_world_matrix());
 		Matrix3::make_normal_from_matrix4(&mut normal_matrix, &model_view_matrix);
 		Matrix3GPU::copy_from_matrix3(&mut normal_matrix_gpu, &normal_matrix);
 

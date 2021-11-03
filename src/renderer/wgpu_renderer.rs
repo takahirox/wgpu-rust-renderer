@@ -159,12 +159,7 @@ impl WGPURenderer {
 			None => return,
 		};
 
-		for i in 0..scene.get_nodes_num() {
-			let node_rid = match scene.borrow_node(i) {
-				Some(rid) => rid,
-				None => continue,
-			};
-
+		for node_rid in scene.collect_nodes(pools).iter() {
 			let mesh = match scene.borrow_assigned_to::<Mesh>(node_rid) {
 				Some(rid) => match mesh_pool.borrow(rid) {
 					Some(mesh) => mesh,
@@ -293,12 +288,7 @@ impl WGPURenderer {
 				}),
 			});
 
-			for i in 0..scene.get_nodes_num() {
-				let node_rid = match scene.borrow_node(i) {
-					Some(rid) => rid,
-					None => continue,
-				};
-
+			for node_rid in scene.collect_nodes(pools).iter() {
 				let mesh = match scene.borrow_assigned_to::<Mesh>(node_rid) {
 					Some(rid) => match mesh_pool.borrow(rid) {
 						Some(mesh) => mesh,

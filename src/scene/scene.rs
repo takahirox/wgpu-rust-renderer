@@ -15,7 +15,10 @@ use crate::{
 	scene::{
 		camera::PerspectiveCamera,
 		mesh::Mesh,
-		node::Node,
+		node::{
+			Node,
+			NodeExecutor,
+		},
 	},
 };
 
@@ -76,8 +79,7 @@ fn cast_links_mut<T1: 'static, T2: 'static>(links: &mut dyn ResourceLinksTrait) 
 pub struct Scene {
 	background_color: [f32; 3],
 	links: HashMap<TypeId, Box<dyn ResourceLinksTrait>>,
-	nodes: Vec<ResourceId<Node>>, // index in nodes -> node resource id
-	node_index_map: HashMap<ResourceId<Node>, usize>, // node resource id -> index in nodes
+	nodes: Vec<ResourceId<Node>>,
 }
 
 impl Scene {
@@ -92,7 +94,6 @@ impl Scene {
 			background_color: *Color::set(&mut Color::create(), 1.0, 1.0, 1.0),
 			links: links,
 			nodes: Vec::new(),
-			node_index_map: HashMap::new(),
 		}
 	}
 
@@ -118,6 +119,7 @@ impl Scene {
 		}
 	}
 
+	// Where should be this method placed?
 	pub fn assign<T: 'static>(
 		&mut self,
 		rid1: &ResourceId<Node>,
@@ -137,21 +139,16 @@ impl Scene {
 	}
 
 	pub fn add_node(&mut self, rid: &ResourceId<Node>) {
-		self.node_index_map.insert(*rid, self.nodes.len());
 		self.nodes.push(*rid);
 	}
 
-	pub fn get_nodes_num(&self) -> usize {
-		self.nodes.len()
-	}
-
-	// @TODO: Fix me
-	pub fn borrow_node(&self, index: usize) -> Option<&ResourceId<Node>> {
-		if index < self.nodes.len() {
-			Some(&self.nodes[index])
-		} else {
-			None
+	pub fn collect_nodes(&self, pools: &ResourcePools) -> Vec<ResourceId<Node>> {
+		let mut nodes = Vec::new();
+		let pool = pools.borrow::<Node>();
+		for node in self.nodes.iter() {
+			NodeExecutor::collect_nodes(pool, node, &mut nodes);
 		}
+		nodes
 	}
 
 	pub fn borrow_background_color(&self) -> &[f32; 3] {
@@ -165,10 +162,9 @@ impl Scene {
 	pub fn update_matrices(&self, pools: &ResourcePools) {
 		// @TODO: Write comment about why unsafe
 		// @TODO: Remove unsafe
-		let node_pool = pools.borrow_mut_unsafe::<Node>();
-		for node_rid in self.nodes.iter() {
-			let node = node_pool.borrow_mut(node_rid).unwrap();
-			node.update_matrix();
+		let pool = pools.borrow_mut_unsafe::<Node>();
+		for node in self.nodes.iter() {
+			NodeExecutor::update_matrices(pool, node);
 		}
 	}
 }
