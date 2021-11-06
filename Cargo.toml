@@ -14,24 +14,35 @@ exclude = [
 ]
 
 [dependencies]
+bytemuck = {version = "1.7.2", features = ["derive"]}
+futures = "0.3.17"
 gltf = "0.16.0"
-jpeg-decoder = "0.1"
 png = "0.17.1"
-winit = "0.25.0"
 wgpu = "0.11.0"
 
-[dependencies.bytemuck]
-version = "1.7.2"
-features = ["derive"]
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+jpeg-decoder = "0.1.22"
+winit = "0.25.0"
 
-[dependencies.web-sys]
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+jpeg-decoder = {version = "0.1.22", default-features = false}
+js-sys = "0.3.55"
+wasm-bindgen = "0.2.78"
+wasm-bindgen-futures = "0.4.28"
+winit = {version = "0.25.0", features = ["web-sys"]}
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
 version = "0.3.55"
 features = [
   "CssStyleDeclaration",
   "HtmlCanvasElement",
+  "Request",
+  "RequestInit",
+  "RequestMode",
+  "Response",
 ]
 
-[dev-dependencies]
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 tokio = {version = "1.12.0", features = ["full"]}
 
 [badges]

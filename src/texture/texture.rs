@@ -2,6 +2,7 @@
 pub enum TextureFormat {
 	Float,
 	Uint8,
+	Uint8Srgb,
 }
 
 // @TODO: Support 3D texture

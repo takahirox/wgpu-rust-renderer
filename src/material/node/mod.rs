@@ -3,6 +3,7 @@ pub mod brdf;
 pub mod const_float;
 pub mod const_vector3;
 pub mod float;
+pub mod linear_to_srgb;
 pub mod multiply;
 pub mod node;
 pub mod normal;

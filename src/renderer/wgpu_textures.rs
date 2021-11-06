@@ -8,11 +8,11 @@ use crate::{
 		ResourceId,
 		ResourcePools,
 	},
-	texture::texture::Texture,
+	texture::texture::{
+		Texture,
+		TextureFormat,
+	},
 };
-
-// @TODO: Fix me.
-const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
 
 pub struct WGPUTextures {
 	textures: HashMap<ResourceId<Texture>, wgpu::Texture>,
@@ -43,7 +43,7 @@ impl WGPUTextures {
 					device,
 					texture.get_width(),
 					texture.get_height(),
-					FORMAT,
+					get_wgpu_format(texture.borrow_format()),
 				);
 				upload_texture(
 					queue,
@@ -116,4 +116,12 @@ fn upload_texture(
 			depth_or_array_layers: 1,
         },
 	);
+}
+
+fn get_wgpu_format(format: &TextureFormat) -> wgpu::TextureFormat {
+	match format {
+		TextureFormat::Float => wgpu::TextureFormat::Rgba32Float,
+		TextureFormat::Uint8 => wgpu::TextureFormat::Rgba8Unorm,
+		TextureFormat::Uint8Srgb => wgpu::TextureFormat::Rgba8UnormSrgb,
+	}
 }

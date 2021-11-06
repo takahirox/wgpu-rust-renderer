@@ -1,4 +1,4 @@
-use std::fs::File;
+use crate::utils::file_loader::FileLoader;
 
 use crate::{
 	resource::resource::{
@@ -24,6 +24,8 @@ impl TextureLoader {
 	pub fn load_png<R: std::io::Read>(
 		pools: &mut ResourcePools,
 		reader: R,
+		// @TODO: Should use default rather than Option?
+		format: Option<TextureFormat>,
 	) -> ResourceId<Texture> {
 		let decoder = png::Decoder::new(reader);
 		let mut reader = decoder.read_info().unwrap();
@@ -38,22 +40,27 @@ impl TextureLoader {
 			Texture::new(
 				width,
 				height,
-				TextureFormat::Uint8,
+				match format {
+					Some(format) => format,
+					None => TextureFormat::Uint8,
+				},
 				buf,
 			)
 		)
 	}
 
-	pub fn load_png_with_filepath(
+	pub async fn load_png_with_filepath(
 		pools: &mut ResourcePools,
 		file_path: &str,
+		format: Option<TextureFormat>,
 	)-> ResourceId<Texture> {
-		Self::load_png(pools, File::open(file_path).unwrap())
+		Self::load_png(pools, FileLoader::open(file_path).await, format)
 	}
 
 	pub fn load_jpg<R: std::io::Read>(
 		pools: &mut ResourcePools,
 		reader: R,
+		format: Option<TextureFormat>,
 	) -> ResourceId<Texture> {
 		let mut decoder = jpeg_decoder::Decoder::new(reader);
 		let pixels = decoder.decode().expect("failed to decode image");
@@ -77,17 +84,21 @@ impl TextureLoader {
 			Texture::new(
 				width,
 				height,
-				TextureFormat::Uint8,
+				match format {
+					Some(format) => format,
+					None => TextureFormat::Uint8,
+				},
 				data,
 			)
 		)
 	}
 
-	pub fn load_jpg_with_filepath(
+	pub async fn load_jpg_with_filepath(
 		pools: &mut ResourcePools,
 		file_path: &str,
+		format: Option<TextureFormat>,
 	)-> ResourceId<Texture> {
-		Self::load_jpg(pools, File::open(file_path).unwrap())
+		Self::load_jpg(pools, FileLoader::open(file_path).await, format)
 	}
 
 	pub fn create_default_sampler(

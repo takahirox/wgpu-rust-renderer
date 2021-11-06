@@ -50,15 +50,21 @@ use crate::{
 			SamplerDescriptor,
 			WrapMode
 		},
-		texture::Texture,
+		texture::{
+			Texture,
+			TextureFormat,
+		},
 	},
-	utils::texture_loader::TextureLoader,
+	utils::{
+		file_loader::FileLoader,
+		texture_loader::TextureLoader,
+	},
 };
 
-fn parse_attribute(
+async fn parse_attribute(
 	pools: &mut ResourcePools,
 	path: &str,
-	primitive: &gltf::Attribute,
+	primitive: &gltf::Attribute<'_>,
 ) -> (&'static str, ResourceId<Attribute>) {
 	let (semantic, accessor) = primitive;
 	use gltf::mesh::Semantic;
@@ -76,9 +82,9 @@ fn parse_attribute(
 			Source::Uri(uri) => {
 				let mut buf = [0_u8; 4];
 				let mut data = Vec::<f32>::new();
-				let mut file = std::fs::File::open(
-					path.to_owned() + uri,
-				).unwrap();
+				let mut file = FileLoader::open(
+					&(path.to_owned() + uri),
+				).await;
 				for i in 0..(length / 4) {
 					file.seek(SeekFrom::Start((offset + i * 4) as u64)).unwrap();
 					file.read_exact(&mut buf).unwrap();
@@ -112,30 +118,30 @@ fn parse_attribute(
 	}
 }
 
-fn parse_geometry(
+async fn parse_geometry(
 	pools: &mut ResourcePools,
 	path: &str,
-	primitive_def: &gltf::Primitive,
+	primitive_def: &gltf::Primitive<'_>,
 ) -> ResourceId<Geometry> {
 	let mut geometry = Geometry::new();
 
 	for attribute_def in primitive_def.attributes() {
-		let (name, attribute) = parse_attribute(pools, path, &attribute_def);
+		let (name, attribute) = parse_attribute(pools, path, &attribute_def).await;
 		geometry.set_attribute(&name, attribute);
 	}
 
 	if let Some(accessor) = primitive_def.indices() {
-		let index = parse_index(pools, path, &accessor);
+		let index = parse_index(pools, path, &accessor).await;
 		geometry.set_index(index);
 	}
 
 	pools.borrow_mut::<Geometry>().add(geometry)
 }
 
-fn parse_material(
+async fn parse_material(
 	pools: &mut ResourcePools,
 	path: &str,
-	material_def: &gltf::Material,
+	material_def: &gltf::Material<'_>,
 ) -> ResourceId<Material> {
 	let pbr_metallic_roughness = material_def.pbr_metallic_roughness();
 
@@ -150,7 +156,7 @@ fn parse_material(
 	));
 
 	let base_color = if let Some(info) = pbr_metallic_roughness.base_color_texture() {
-		let (texture, sampler) = parse_texture_info(pools, path, &info);
+		let (texture, sampler) = parse_texture_info(pools, path, &info, Some(TextureFormat::Uint8Srgb)).await;
 
 		let texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
 			Box::new(TextureNode::new(texture, sampler)),
@@ -185,7 +191,7 @@ fn parse_material(
 	);
 
 	let (metallic, roughness) = if let Some(info) = pbr_metallic_roughness.metallic_roughness_texture() {
-		let (texture, sampler) = parse_texture_info(pools, path, &info);
+		let (texture, sampler) = parse_texture_info(pools, path, &info, None).await;
 
 		let texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
 			Box::new(TextureNode::new(texture, sampler)),
@@ -215,7 +221,7 @@ fn parse_material(
 	// Normal
 
 	let normal = if let Some(info) = material_def.normal_texture() {
-		let (texture, sampler) = parse_normal_texture_info(pools, path, &info);
+		let (texture, sampler) = parse_normal_texture_info(pools, path, &info).await;
 
 		let texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
 			Box::new(TextureNode::new(texture, sampler)),
@@ -271,7 +277,7 @@ fn parse_material(
 	));
 
 	let emissive = if let Some(info) = material_def.emissive_texture() {
-		let (texture, sampler) = parse_texture_info(pools, path, &info);
+		let (texture, sampler) = parse_texture_info(pools, path, &info, Some(TextureFormat::Uint8Srgb)).await;
 
 		let texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
 			Box::new(TextureNode::new(texture, sampler)),
@@ -302,11 +308,11 @@ fn parse_material(
 	pools.borrow_mut::<Material>().add(Material::new(add))
 }
 
-fn parse_node(
+async fn parse_node(
 	pools: &mut ResourcePools,
 	scene: &ResourceId<Scene>,
 	path: &str,
-	node_def: &gltf::Node,
+	node_def: &gltf::Node<'_>,
 ) -> ResourceId<Node> {
 	let mut node = Node::new();
 
@@ -334,7 +340,7 @@ fn parse_node(
 
 	if let Some(mesh_def) = node_def.mesh() {
 		for primitive_def in mesh_def.primitives() {
-			let (geometry, material) = parse_primitive(pools, path, &primitive_def);
+			let (geometry, material) = parse_primitive(pools, path, &primitive_def).await;
 			let mesh = pools.borrow_mut::<Mesh>().add(Mesh::new(geometry, material));
 			pools.borrow_mut::<Scene>().borrow_mut(scene).unwrap().assign(&node, &mesh);
 		}
@@ -343,18 +349,18 @@ fn parse_node(
 	node
 }
 
-fn parse_normal_texture_info(
+async fn parse_normal_texture_info(
 	pools: &mut ResourcePools,
 	path: &str,
-	info: &gltf::material::NormalTexture,
+	info: &gltf::material::NormalTexture<'_>,
 ) -> (ResourceId<Texture>, ResourceId<Sampler>) {
-	parse_texture(pools, path, &info.texture())
+	parse_texture(pools, path, &info.texture(), None).await
 }
 
-fn parse_index(
+async fn parse_index(
 	pools: &mut ResourcePools,
 	path: &str,
-	index: &gltf::Accessor,
+	index: &gltf::Accessor<'_>,
 ) -> ResourceId<Index> {
 	if let Some(view) = index.view() {
 		let offset = view.offset();
@@ -370,9 +376,9 @@ fn parse_index(
 			Source::Uri(uri) => {
 				let mut buf = [0_u8; 2];
 				let mut data = Vec::<u16>::new();
-				let mut file = std::fs::File::open(
-					path.to_owned() + uri,
-				).unwrap();
+				let mut file = FileLoader::open(
+					&(path.to_owned() + uri),
+				).await;
 				for i in 0..(length / 2) {
 					file.seek(SeekFrom::Start((offset + i * 2) as u64)).unwrap();
 					file.read_exact(&mut buf).unwrap();
@@ -388,14 +394,14 @@ fn parse_index(
 	}
 }
 
-fn parse_primitive(
+async fn parse_primitive(
 	pools: &mut ResourcePools,
 	path: &str,
-	primitive_def: &gltf::Primitive,
+	primitive_def: &gltf::Primitive<'_>,
 ) -> (ResourceId<Geometry>, ResourceId<Material>) {
 	(
-		parse_geometry(pools, path, primitive_def),
-		parse_material(pools, path, &primitive_def.material())
+		parse_geometry(pools, path, primitive_def).await,
+		parse_material(pools, path, &primitive_def.material()).await
 	)
 }
 
@@ -450,10 +456,11 @@ fn parse_sampler(
 	))
 }
 
-fn parse_texture(
+async fn parse_texture(
 	pools: &mut ResourcePools,
 	path: &str,
-	texture_def: &gltf::Texture,
+	texture_def: &gltf::Texture<'_>,
+	format: Option<TextureFormat>
 ) -> (ResourceId<Texture>, ResourceId<Sampler>) {
 	let source = texture_def.source();
 
@@ -464,7 +471,8 @@ fn parse_texture(
 			TextureLoader::load_jpg_with_filepath(
 				pools,
 				&(path.to_owned() + uri),
-			)
+				format,
+			).await
 		},
 		Source::View {..} => {
 			panic!("Unsuppored");
@@ -474,33 +482,36 @@ fn parse_texture(
 	(texture, parse_sampler(pools, &texture_def.sampler()))
 }
 
-fn parse_texture_info(
+async fn parse_texture_info(
 	pools: &mut ResourcePools,
 	path: &str,
-	info: &gltf::texture::Info,
+	info: &gltf::texture::Info<'_>,
+	format: Option<TextureFormat>,
 ) -> (ResourceId<Texture>, ResourceId<Sampler>) {
-	parse_texture(pools, path, &info.texture())
+	parse_texture(pools, path, &info.texture(), format).await
 }
 
 pub struct GltfLoader{
 }
 
-// @TODO: Clean up
-// @TODO: Wasm support
 impl GltfLoader {
-	pub fn load_gltf(
+	pub async fn load_gltf(
 		pools: &mut ResourcePools,
 		scene: &ResourceId<Scene>,
 		path: &str,
 		filename: &str,
 	) -> Vec<ResourceId<Node>> {
-		let gltf = Gltf::open(path.to_owned() + filename).unwrap();
+		let gltf = Gltf::from_reader(
+			FileLoader::open(&(path.to_owned() + filename)).await,
+		).unwrap();
+
 		let mut nodes = Vec::new();
 
 		let scene_def = gltf.default_scene().unwrap();
 		for node_def in scene_def.nodes() {
-			nodes.push(parse_node(pools, scene, path, &node_def));
+			nodes.push(parse_node(pools, scene, path, &node_def).await);
 		}
+
 		nodes
 	}
 }

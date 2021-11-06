@@ -42,7 +42,7 @@ pub struct WGPURenderer {
 	surface: wgpu::Surface,
 	surface_configuration: wgpu::SurfaceConfiguration,
 	textures: WGPUTextures,
-	width: f64
+	width: f64,
 }
 
 impl WGPURenderer {
