@@ -22,6 +22,7 @@ impl WGPURenderPipeline {
 		device: &wgpu::Device,
 		bind_group_layout: &wgpu::BindGroupLayout,
 		shader_code: &str,
+		sample_count: u32,
 	) -> Self {
 		// For debug
 		//println!("{}", shader_code);
@@ -105,7 +106,10 @@ impl WGPURenderPipeline {
 				format: wgpu::TextureFormat::Depth24PlusStencil8,
 				stencil: wgpu::StencilState::default(),
 			}),
-			multisample: wgpu::MultisampleState::default(),
+			multisample: wgpu::MultisampleState {
+				count: sample_count,
+				..Default::default()
+			},
 		});
 
 		WGPURenderPipeline {
@@ -140,6 +144,7 @@ impl WGPURenderPipelines {
 		node: &ResourceId<Node>,
 		material: &Material,
 		bind_group_layout: &wgpu::BindGroupLayout,
+		sample_count: u32,
 	) {
 		if !self.pipelines.contains_key(&node) {
 			self.pipelines.insert(
@@ -150,6 +155,7 @@ impl WGPURenderPipelines {
 					&material.build_shader_code(
 						pools.borrow::<Box<dyn MaterialNode>>(),
 					),
+					sample_count,
 				)
 			);
 		}

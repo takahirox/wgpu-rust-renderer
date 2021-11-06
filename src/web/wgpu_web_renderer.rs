@@ -1,6 +1,9 @@
 use std::ops::{Deref, DerefMut};
 use winit::window::Window;
-use crate::renderer::wgpu_renderer::WGPURenderer;
+use crate::renderer::wgpu_renderer::{
+	WGPURenderer,
+	WGPURendererOptions,
+};
 
 pub struct WGPUWebRenderer {
 	canvas: web_sys::HtmlCanvasElement,
@@ -23,10 +26,14 @@ impl DerefMut for WGPUWebRenderer {
 }
 
 impl WGPUWebRenderer {
-	pub async fn new(window: &Window, canvas: web_sys::HtmlCanvasElement) -> WGPUWebRenderer {
+	pub async fn new(
+		window: &Window,
+		canvas: web_sys::HtmlCanvasElement,
+		options: WGPURendererOptions,
+	) -> WGPUWebRenderer {
 		WGPUWebRenderer {
 			canvas: canvas,
-			renderer: WGPURenderer::new(window).await,
+			renderer: WGPURenderer::new(window, options).await,
 		}
 	}
 

@@ -27,9 +27,22 @@ use crate::{
 	},
 };
 
+pub struct WGPURendererOptions {
+	pub sample_count: u32,
+}
+
+impl Default for WGPURendererOptions {
+	fn default() -> Self {
+		WGPURendererOptions {
+			sample_count: 4,
+		}
+	}
+}
+
 pub struct WGPURenderer {
 	attributes: WGPUAttributes,
 	bindings: WGPUBindings,
+	color_buffer: wgpu::Texture,
 	device: wgpu::Device,
 	depth_buffer: wgpu::Texture,
 	height: f64,
@@ -37,6 +50,7 @@ pub struct WGPURenderer {
 	pixel_ratio: f64,
 	queue: wgpu::Queue,
 	render_pipelines: WGPURenderPipelines,
+	sample_count: u32,
 	samplers: WGPUSamplers,
 	surface: wgpu::Surface,
 	surface_configuration: wgpu::SurfaceConfiguration,
@@ -45,7 +59,7 @@ pub struct WGPURenderer {
 }
 
 impl WGPURenderer {
-	pub async fn new(window: &Window) -> Self {
+	pub async fn new(window: &Window, options: WGPURendererOptions) -> Self {
 		let width = 640.0;
 		let height = 480.0;
 		let pixel_ratio = 1.0;
@@ -87,13 +101,27 @@ impl WGPURenderer {
 		WGPURenderer {
 			attributes: WGPUAttributes::new(),
 			bindings: WGPUBindings::new(),
-			depth_buffer: create_depth_buffer(&device, width, height, pixel_ratio),
+			color_buffer: create_color_buffer(
+				&device,
+				width,
+				height,
+				pixel_ratio,
+				options.sample_count,
+			),
+			depth_buffer: create_depth_buffer(
+				&device,
+				width,
+				height,
+				pixel_ratio,
+				options.sample_count,
+			),
 			device: device,
 			height: height,
 			indices: WGPUIndices::new(),
 			pixel_ratio: pixel_ratio,
 			queue: queue,
 			render_pipelines: WGPURenderPipelines::new(),
+			sample_count: options.sample_count,
 			samplers: WGPUSamplers::new(),
 			surface: surface,
 			surface_configuration: surface_configuration,
@@ -107,6 +135,7 @@ impl WGPURenderer {
 		self.height = height;
 
 		self.update_surface_configuration();
+		self.recreate_color_buffer();
 		self.recreate_depth_buffer();
 
 		self
@@ -221,6 +250,7 @@ impl WGPURenderer {
 				node_rid,
 				material,
 				&self.bindings.borrow(node_rid).unwrap().borrow_layout(),
+				self.sample_count,
 			);
 		}
 	}
@@ -250,6 +280,7 @@ impl WGPURenderer {
 			.texture
 			.create_view(&wgpu::TextureViewDescriptor::default());
 
+		let color_view = &self.color_buffer.create_view(&wgpu::TextureViewDescriptor::default());
 		let depth_view = &self.depth_buffer.create_view(&wgpu::TextureViewDescriptor::default());
 
 		let background_color = scene.borrow_background_color();
@@ -270,8 +301,14 @@ impl WGPURenderer {
 						}),
 						store: true,
 					},
-					resolve_target: None,
-					view: &view,
+					resolve_target: match self.sample_count {
+						1 => None,
+						_ => Some(&view),
+					},
+					view: match self.sample_count {
+						1 => &view,
+						_ => &color_view,
+					},
 				}],
 				depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
 					depth_ops: Some(wgpu::Operations {
@@ -360,18 +397,36 @@ impl WGPURenderer {
 		self.surface.configure(&self.device, &self.surface_configuration);
 	}
 
+	fn recreate_color_buffer(&mut self) {
+		self.color_buffer.destroy();
+		self.color_buffer = create_color_buffer(
+			&self.device,
+			self.width,
+			self.height,
+			self.pixel_ratio,
+			self.sample_count,
+		);
+	}
+
 	fn recreate_depth_buffer(&mut self) {
 		self.depth_buffer.destroy();
 		self.depth_buffer = create_depth_buffer(
 			&self.device,
 			self.width,
 			self.height,
-			self.pixel_ratio
+			self.pixel_ratio,
+			self.sample_count,
 		);
 	}
 }
 
-fn create_depth_buffer(device: &wgpu::Device, width: f64, height: f64, pixel_ratio: f64) -> wgpu::Texture {
+fn create_color_buffer(
+	device: &wgpu::Device,
+	width: f64,
+	height: f64,
+	pixel_ratio: f64,
+	sample_count: u32,
+) -> wgpu::Texture {
 	device.create_texture(&wgpu::TextureDescriptor {
 		label: None,
 		size: wgpu::Extent3d {
@@ -380,7 +435,29 @@ fn create_depth_buffer(device: &wgpu::Device, width: f64, height: f64, pixel_rat
 			depth_or_array_layers: 1,
 		},
 		mip_level_count: 1,
-		sample_count: 1,
+		sample_count: sample_count,
+		dimension: wgpu::TextureDimension::D2,
+		format: wgpu::TextureFormat::Bgra8Unorm,
+		usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+	})
+}
+
+fn create_depth_buffer(
+	device: &wgpu::Device,
+	width: f64,
+	height: f64,
+	pixel_ratio: f64,
+	sample_count: u32,
+) -> wgpu::Texture {
+	device.create_texture(&wgpu::TextureDescriptor {
+		label: None,
+		size: wgpu::Extent3d {
+			width: (width * pixel_ratio) as u32,
+			height: (height * pixel_ratio) as u32,
+			depth_or_array_layers: 1,
+		},
+		mip_level_count: 1,
+		sample_count: sample_count,
 		dimension: wgpu::TextureDimension::D2,
 		format: wgpu::TextureFormat::Depth24PlusStencil8,
 		usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
