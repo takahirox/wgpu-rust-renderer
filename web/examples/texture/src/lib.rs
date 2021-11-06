@@ -28,6 +28,7 @@ use wgpu_rust_renderer::{
 		node::Node,
 		scene::Scene,
 	},
+	texture::texture::TextureFormat,
 	utils::{
 		geometry_helper::GeometryHelper,
 		material_helper::MaterialHelper,
@@ -53,7 +54,7 @@ async fn create_scene(
 		pools,
 		// Path from index.html
 		"./assets/texture.png",
-		None,
+		TextureFormat::default(),
 	).await;
 
 	let material = MaterialHelper::create_basic_material_with_texture(
