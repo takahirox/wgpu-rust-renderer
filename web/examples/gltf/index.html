@@ -1,0 +1,27 @@
+<html>
+  <head>
+    <title>WebGPU Rust Renderer example - glTF</title>
+    <!-- until Nov 23, 2021 -->
+    <meta http-equiv="origin-trial" content="ApPO2aGStAGnAwjSYagzhdHR5Fptfn2GnEDmVql0R1bOWXu43oKuEs7CTLWLM4AIzUHbea+L1f8/ixDj3ndwagAAAABTeyJvcmlnaW4iOiJodHRwczovL3Rha2FoaXJveC5naXRodWIuaW86NDQzIiwiZmVhdHVyZSI6IldlYkdQVSIsImV4cGlyeSI6MTY0MzE1NTE5OX0=">
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+    <style type="text/css">
+      body {
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      import init from './wgpu_rust_renderer_example_gltf.js';
+
+      if (!document.createElement('canvas').getContext('webgpu')) {
+        const span = document.createElement('span');
+        span.innerText = 'Your browser does not seem to support WebGPU';
+        document.body.appendChild(span);
+      } else {
+        init().catch(console.error);
+      }
+    </script>
+  </body>
+</html>
