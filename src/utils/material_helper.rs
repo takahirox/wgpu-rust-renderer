@@ -20,8 +20,13 @@ use crate::{
 		ResourceId,
 		ResourcePools,
 	},
-	texture::texture::Texture,
-	utils::texture_loader::TextureLoader,
+	texture::{
+		sampler::{
+			Sampler,
+			SamplerDescriptor,
+		},
+		texture::Texture,
+	},
 };
 
 pub struct MaterialHelper {
@@ -52,7 +57,10 @@ impl MaterialHelper {
 			),
 		));
 
-		let sampler = TextureLoader::create_default_sampler(pools);
+		let sampler = pools.borrow_mut::<Sampler>().add(
+			Sampler::new(SamplerDescriptor::default()),
+		);
+
 		let texture = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
 			Box::new(TextureNode::new(texture, sampler)),
 		);

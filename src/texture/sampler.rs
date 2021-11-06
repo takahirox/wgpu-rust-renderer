@@ -20,42 +20,37 @@ pub struct Sampler {
 }
 
 pub struct SamplerDescriptor {
-	pub mag_filter: Option<FilterMode>,
-	pub min_filter: Option<FilterMode>,
-	pub mipmap_filter: Option<FilterMode>,
-	pub wrap_u: Option<WrapMode>,
-	pub wrap_v: Option<WrapMode>,
-	pub wrap_w: Option<WrapMode>,
+	pub mag_filter: FilterMode,
+	pub min_filter: FilterMode,
+	pub mipmap_filter: FilterMode,
+	pub wrap_u: WrapMode,
+	pub wrap_v: WrapMode,
+	pub wrap_w: WrapMode,
+}
+
+impl Default for SamplerDescriptor {
+	fn default() -> Self {
+		SamplerDescriptor {
+			mag_filter: FilterMode::Linear,
+			min_filter: FilterMode::Linear,
+			mipmap_filter: FilterMode::Linear,
+			wrap_u: WrapMode::ClampToEdge,
+			wrap_v: WrapMode::ClampToEdge,
+			wrap_w: WrapMode::ClampToEdge,
+		}
+	}
 }
 
 impl Sampler {
 	pub fn new(desc: SamplerDescriptor) -> Self {
 		// @TODO: Fix default parameters
 		Sampler {
-			mag_filter: match desc.mag_filter {
-				Some(filter) => filter,
-				None => FilterMode::Linear,
-			},
-			min_filter: match desc.min_filter {
-				Some(filter) => filter,
-				None => FilterMode::Linear,
-			},
-			mipmap_filter: match desc.mipmap_filter {
-				Some(filter) => filter,
-				None => FilterMode::Linear,
-			},
-			wrap_u: match desc.wrap_u {
-				Some(wrap) => wrap,
-				None => WrapMode::ClampToEdge,
-			},
-			wrap_v: match desc.wrap_v {
-				Some(wrap) => wrap,
-				None => WrapMode::ClampToEdge,
-			},
-			wrap_w: match desc.wrap_w {
-				Some(wrap) => wrap,
-				None => WrapMode::ClampToEdge,
-			},
+			mag_filter: desc.mag_filter,
+			min_filter: desc.min_filter,
+			mipmap_filter: desc.mipmap_filter,
+			wrap_u: desc.wrap_u,
+			wrap_v: desc.wrap_v,
+			wrap_w: desc.wrap_w,
 		}
 	}
 

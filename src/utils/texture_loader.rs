@@ -6,10 +6,6 @@ use crate::{
 		ResourcePools,
 	},
 	texture::{
-		sampler::{
-			Sampler,
-			SamplerDescriptor,
-		},
 		texture::{
 			Texture,
 			TextureFormat,
@@ -113,20 +109,5 @@ impl TextureLoader {
 			},
 			None => panic!("Can not detect image file format from the file path, {}", file_path),
 		}
-	}
-
-	pub fn create_default_sampler(
-		pools: &mut ResourcePools,
-	) -> ResourceId<Sampler> {
-		pools.borrow_mut::<Sampler>().add(
-			Sampler::new(SamplerDescriptor {
-				mag_filter: None,
-				min_filter: None,
-				mipmap_filter: None,
-				wrap_u: None,
-				wrap_v: None,
-				wrap_w: None,
-			})
-		)
 	}
 }

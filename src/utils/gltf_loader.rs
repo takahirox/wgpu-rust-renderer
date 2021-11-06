@@ -405,44 +405,44 @@ fn parse_sampler(
 		SamplerDescriptor {
 			mag_filter: match sampler.mag_filter() {
 				Some(filter) => match filter {
-					gltf::texture::MagFilter::Nearest => Some(FilterMode::Nearest),
-					gltf::texture::MagFilter::Linear => Some(FilterMode::Linear),
+					gltf::texture::MagFilter::Nearest => FilterMode::Nearest,
+					gltf::texture::MagFilter::Linear => FilterMode::Linear,
 				},
-				None => None,
+				None => FilterMode::Linear,
 			},
 			min_filter: match sampler.min_filter() {
 				Some(filter) => match filter {
 					gltf::texture::MinFilter::Linear |
 					gltf::texture::MinFilter::LinearMipmapLinear |
-					gltf::texture::MinFilter::LinearMipmapNearest => Some(FilterMode::Linear),
+					gltf::texture::MinFilter::LinearMipmapNearest => FilterMode::Linear,
 					gltf::texture::MinFilter::Nearest |
 					gltf::texture::MinFilter::NearestMipmapLinear |
-					gltf::texture::MinFilter::NearestMipmapNearest => Some(FilterMode::Nearest),
+					gltf::texture::MinFilter::NearestMipmapNearest => FilterMode::Nearest,
 				},
-				None => None,
+				None => FilterMode::Linear,
 			},
 			mipmap_filter: match sampler.min_filter() {
 				Some(filter) => match filter {
 					gltf::texture::MinFilter::Linear |
-					gltf::texture::MinFilter::Nearest => None,
+					gltf::texture::MinFilter::Nearest => FilterMode::Linear,
 					gltf::texture::MinFilter::LinearMipmapLinear |
-					gltf::texture::MinFilter::NearestMipmapLinear => Some(FilterMode::Linear),
+					gltf::texture::MinFilter::NearestMipmapLinear => FilterMode::Linear,
 					gltf::texture::MinFilter::LinearMipmapNearest |
-					gltf::texture::MinFilter::NearestMipmapNearest => Some(FilterMode::Nearest),
+					gltf::texture::MinFilter::NearestMipmapNearest => FilterMode::Nearest,
 				},
-				None => None,
+				None => FilterMode::Linear,
 			},
 			wrap_u: match sampler.wrap_s() {
-				gltf::texture::WrappingMode::ClampToEdge => Some(WrapMode::ClampToEdge),
-				gltf::texture::WrappingMode::MirroredRepeat => Some(WrapMode::MirrorRepeat),
-				gltf::texture::WrappingMode::Repeat => Some(WrapMode::Repeat),
+				gltf::texture::WrappingMode::ClampToEdge => WrapMode::ClampToEdge,
+				gltf::texture::WrappingMode::MirroredRepeat => WrapMode::MirrorRepeat,
+				gltf::texture::WrappingMode::Repeat => WrapMode::Repeat,
 			},
 			wrap_v: match sampler.wrap_t() {
-				gltf::texture::WrappingMode::ClampToEdge => Some(WrapMode::ClampToEdge),
-				gltf::texture::WrappingMode::MirroredRepeat => Some(WrapMode::MirrorRepeat),
-				gltf::texture::WrappingMode::Repeat => Some(WrapMode::Repeat),
+				gltf::texture::WrappingMode::ClampToEdge => WrapMode::ClampToEdge,
+				gltf::texture::WrappingMode::MirroredRepeat => WrapMode::MirrorRepeat,
+				gltf::texture::WrappingMode::Repeat => WrapMode::Repeat,
 			},
-			wrap_w: None,
+			wrap_w: WrapMode::Repeat,
 		},
 	))
 }
