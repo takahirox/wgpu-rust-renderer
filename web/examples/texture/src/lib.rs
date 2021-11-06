@@ -1,6 +1,3 @@
-#[path = "../../utils/fetch.rs"]
-mod fetch;
-
 #[path = "../../utils/window.rs"]
 mod window;
 
@@ -10,7 +7,6 @@ use winit::{
 	event_loop::{ControlFlow, EventLoop},
 };
 
-use fetch::fetch_as_binary;
 use window::{
 	create_window,
 	get_window_device_pixel_ratio,
@@ -53,15 +49,12 @@ async fn create_scene(
 		1.0,
 	);
 
-	let texture = TextureLoader::load_png(
+	let texture = TextureLoader::load_png_with_filepath(
 		pools,
-		std::io::Cursor::new(
-			// Path from index.html
-			fetch_as_binary("./assets/texture.png".to_string())
-				.await
-				.unwrap(),
-		)
-	);
+		// Path from index.html
+		"./assets/texture.png",
+		None,
+	).await;
 
 	let material = MaterialHelper::create_basic_material_with_texture(
 		pools,
