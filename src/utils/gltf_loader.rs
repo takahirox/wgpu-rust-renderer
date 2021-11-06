@@ -155,7 +155,7 @@ async fn parse_material(
 	));
 
 	let base_color = if let Some(info) = pbr_metallic_roughness.base_color_texture() {
-		let (texture, sampler) = parse_texture_info(pools, path, &info, Some(TextureFormat::Uint8Srgb)).await;
+		let (texture, sampler) = parse_texture_info(pools, path, &info, TextureFormat::Uint8Srgb).await;
 
 		let texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
 			Box::new(TextureNode::new(texture, sampler)),
@@ -186,7 +186,7 @@ async fn parse_material(
 	);
 
 	let (metallic, roughness) = if let Some(info) = pbr_metallic_roughness.metallic_roughness_texture() {
-		let (texture, sampler) = parse_texture_info(pools, path, &info, None).await;
+		let (texture, sampler) = parse_texture_info(pools, path, &info, TextureFormat::default()).await;
 
 		let texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
 			Box::new(TextureNode::new(texture, sampler)),
@@ -272,7 +272,7 @@ async fn parse_material(
 	));
 
 	let emissive = if let Some(info) = material_def.emissive_texture() {
-		let (texture, sampler) = parse_texture_info(pools, path, &info, Some(TextureFormat::Uint8Srgb)).await;
+		let (texture, sampler) = parse_texture_info(pools, path, &info, TextureFormat::Uint8Srgb).await;
 
 		let texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
 			Box::new(TextureNode::new(texture, sampler)),
@@ -345,7 +345,7 @@ async fn parse_normal_texture_info(
 	path: &str,
 	info: &gltf::material::NormalTexture<'_>,
 ) -> (ResourceId<Texture>, ResourceId<Sampler>) {
-	parse_texture(pools, path, &info.texture(), None).await
+	parse_texture(pools, path, &info.texture(), TextureFormat::default()).await
 }
 
 async fn parse_index(
@@ -451,7 +451,7 @@ async fn parse_texture(
 	pools: &mut ResourcePools,
 	path: &str,
 	texture_def: &gltf::Texture<'_>,
-	format: Option<TextureFormat>
+	format: TextureFormat
 ) -> (ResourceId<Texture>, ResourceId<Sampler>) {
 	let source = texture_def.source();
 
@@ -476,7 +476,7 @@ async fn parse_texture_info(
 	pools: &mut ResourcePools,
 	path: &str,
 	info: &gltf::texture::Info<'_>,
-	format: Option<TextureFormat>,
+	format: TextureFormat,
 ) -> (ResourceId<Texture>, ResourceId<Sampler>) {
 	parse_texture(pools, path, &info.texture(), format).await
 }

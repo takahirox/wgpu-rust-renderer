@@ -5,6 +5,12 @@ pub enum TextureFormat {
 	Uint8Srgb,
 }
 
+impl Default for TextureFormat {
+	fn default() -> Self {
+		TextureFormat::Uint8
+	}
+}
+
 // @TODO: Support 3D texture
 pub struct Texture {
 	format: TextureFormat,
