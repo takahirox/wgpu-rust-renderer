@@ -26,6 +26,8 @@ Web application.
 * Tiny WebGPU Renderling library
 * Easy to use
 * Memory safe with Rust
+* [glTF](https://www.khronos.org/gltf/) support
+* Good flexibility and extensibility of materials with node-based material system
 * Web application compatible by compiling to WebAssembly
 
 ## Documents
