@@ -217,7 +217,10 @@ use wgpu_rust_renderer::{
     scene::Scene,
   },
   web::wgpu_web_renderer::WGPUWebRenderer, // for web
-  renderer::wgpu_renderer::WGPURenderer, // for others
+  renderer::wgpu_renderer::{
+    WGPURenderer, // for others
+    WGPURendererOptions,
+  },
 };
 ```
 
