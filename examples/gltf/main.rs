@@ -18,7 +18,7 @@ use wgpu_rust_renderer::{
 	utils::gltf_loader::GltfLoader,
 };
 
-fn create_scene(
+async fn create_scene(
 	window: &Window,
 	pools: &mut ResourcePools
 ) -> (ResourceId<Scene>, ResourceId<PerspectiveCamera>, Vec<ResourceId<Node>>) {
@@ -33,7 +33,7 @@ fn create_scene(
 			"/examples/gltf/assets/",
 		),
 		"DamagedHelmet.gltf",
-	);
+	).await;
 
 	for node in nodes.iter() {
 		pools.borrow_mut::<Scene>()
@@ -130,7 +130,7 @@ async fn main() {
 	renderer.set_pixel_ratio(pixel_ratio);
 
 	let mut pools = ResourcePools::new();
-	let (scene, camera, objects) = create_scene(&window, &mut pools);
+	let (scene, camera, objects) = create_scene(&window, &mut pools).await;
 
 	event_loop.run(move |event, _, control_flow| {
 		*control_flow = ControlFlow::Poll;
