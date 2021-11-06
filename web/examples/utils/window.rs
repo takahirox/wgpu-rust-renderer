@@ -6,14 +6,6 @@ use winit::{
 	event_loop::EventLoop,
 };
 
-// For debug
-
-#[wasm_bindgen]
-extern "C" {
-	#[wasm_bindgen(js_namespace = console)]
-	fn log(s: &str);
-}
-
 // Window and DOM element helpers
 
 pub fn get_window_inner_size() -> (f64, f64) {
