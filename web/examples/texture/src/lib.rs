@@ -18,6 +18,7 @@ use wgpu_rust_renderer::{
 		color::Color,
 		vector3::Vector3,
 	},
+	renderer::wgpu_renderer::WGPURendererOptions,
 	resource::resource::{
 		ResourceId,
 		ResourcePools,
@@ -159,7 +160,7 @@ pub async fn start() {
 	let inner_size = get_window_inner_size();
 	let pixel_ratio = get_window_device_pixel_ratio();
 
-	let mut renderer = WGPUWebRenderer::new(&window, window.canvas()).await;
+	let mut renderer = WGPUWebRenderer::new(&window, window.canvas(), WGPURendererOptions::default()).await;
 	renderer.set_size(inner_size.0 as f64, inner_size.1 as f64);
 	renderer.set_pixel_ratio(pixel_ratio as f64);
 
