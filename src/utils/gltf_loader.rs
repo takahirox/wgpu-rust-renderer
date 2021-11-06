@@ -19,7 +19,6 @@ use crate::{
 			multiply::MultiplyNode,
 			node::MaterialNode,
 			normal::NormalNode,
-			srgb_to_linear::SRGBToLinearNode,
 			sub::SubNode,
 			tangent_to_object_normal::TangentToObjectNormalNode,
 			texture::TextureNode,
@@ -162,12 +161,8 @@ async fn parse_material(
 			Box::new(TextureNode::new(texture, sampler)),
 		);
 
-		let linear_texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-			Box::new(SRGBToLinearNode::new(texture_node)),
-		);
-
 		let texture_rgb = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-			Box::new(XYZNode::new(linear_texture_node)),
+			Box::new(XYZNode::new(texture_node)),
 		);
 
 		pools.borrow_mut::<Box<dyn MaterialNode>>().add(
@@ -283,12 +278,8 @@ async fn parse_material(
 			Box::new(TextureNode::new(texture, sampler)),
 		);
 
-		let linear_texture_node = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-			Box::new(SRGBToLinearNode::new(texture_node)),
-		);
-
 		let texture_rgb = pools.borrow_mut::<Box<dyn MaterialNode>>().add(
-			Box::new(XYZNode::new(linear_texture_node)),
+			Box::new(XYZNode::new(texture_node)),
 		);
 
 		pools.borrow_mut::<Box<dyn MaterialNode>>().add(

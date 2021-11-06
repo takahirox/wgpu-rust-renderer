@@ -121,7 +121,9 @@ const FRAGMENT_CHUNK2: &str = "
     let light_factor = clamp(dot(normalize(in.normal), light_dir), 0.0, 1.0) * light_color;
     color = color * light_factor.rgb;
   }
-  return vec4<f32>(color, alpha);
+  // @TODO: Use material node?
+  // @TODO: Color management
+  return linear_to_srgb(vec4<f32>(color, alpha));
 }
 ";
 

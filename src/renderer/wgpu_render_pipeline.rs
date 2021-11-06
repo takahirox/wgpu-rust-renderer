@@ -20,8 +20,6 @@ pub struct WGPURenderPipeline {
 impl WGPURenderPipeline {
 	fn new(
 		device: &wgpu::Device,
-		adapter: &wgpu::Adapter,
-		surface: &wgpu::Surface,
 		bind_group_layout: &wgpu::BindGroupLayout,
 		shader_code: &str,
 	) -> Self {
@@ -38,8 +36,6 @@ impl WGPURenderPipeline {
 			bind_group_layouts: &[bind_group_layout],
 			push_constant_ranges: &[],
 		});
-
-		let swapchain_format = surface.get_preferred_format(&adapter).unwrap();
 
 		// @TODO: Programmable
 		let vertex_buffers = [
@@ -92,7 +88,8 @@ impl WGPURenderPipeline {
 			fragment: Some(wgpu::FragmentState {
 				module: &shader,
 				entry_point: "fs_main",
-				targets: &[swapchain_format.into()],
+				// @TODO: Color management
+				targets: &[wgpu::TextureFormat::Bgra8Unorm.into()],
 			}),
 			// Backface culling
 			// @TODO: Should be configurable 
@@ -139,8 +136,6 @@ impl WGPURenderPipelines {
 	pub fn update(
 		&mut self,
 		device: &wgpu::Device,
-		adapter: &wgpu::Adapter,
-		surface: &wgpu::Surface,
 		pools: &ResourcePools,
 		node: &ResourceId<Node>,
 		material: &Material,
@@ -151,8 +146,6 @@ impl WGPURenderPipelines {
 				*node,
 				WGPURenderPipeline::new(
 					device,
-					adapter,
-					surface,
 					bind_group_layout,
 					&material.build_shader_code(
 						pools.borrow::<Box<dyn MaterialNode>>(),

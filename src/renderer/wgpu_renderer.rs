@@ -28,7 +28,6 @@ use crate::{
 };
 
 pub struct WGPURenderer {
-	adapter: wgpu::Adapter,
 	attributes: WGPUAttributes,
 	bindings: WGPUBindings,
 	device: wgpu::Device,
@@ -74,10 +73,9 @@ impl WGPURenderer {
 			.await
 			.expect("Failed to create device");
 
-		let swapchain_format = surface.get_preferred_format(&adapter).unwrap();
-
 		let surface_configuration = wgpu::SurfaceConfiguration {
-			format: swapchain_format,
+			// @TODO: Color management
+			format: wgpu::TextureFormat::Bgra8Unorm,
 			height: (height * pixel_ratio) as u32,
 			present_mode: wgpu::PresentMode::Mailbox,
 			usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
@@ -87,7 +85,6 @@ impl WGPURenderer {
 		surface.configure(&device, &surface_configuration);
 
 		WGPURenderer {
-			adapter: adapter,
 			attributes: WGPUAttributes::new(),
 			bindings: WGPUBindings::new(),
 			depth_buffer: create_depth_buffer(&device, width, height, pixel_ratio),
@@ -220,8 +217,6 @@ impl WGPURenderer {
 
 			self.render_pipelines.update(
 				&self.device,
-				&self.adapter,
-				&self.surface,
 				pools,
 				node_rid,
 				material,
