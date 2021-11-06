@@ -53,7 +53,7 @@ impl TextureLoader {
 		pools: &mut ResourcePools,
 		file_path: &str,
 		format: Option<TextureFormat>,
-	)-> ResourceId<Texture> {
+	) -> ResourceId<Texture> {
 		Self::load_png(pools, FileLoader::open(file_path).await, format)
 	}
 
@@ -97,8 +97,28 @@ impl TextureLoader {
 		pools: &mut ResourcePools,
 		file_path: &str,
 		format: Option<TextureFormat>,
-	)-> ResourceId<Texture> {
+	) -> ResourceId<Texture> {
 		Self::load_jpg(pools, FileLoader::open(file_path).await, format)
+	}
+
+	pub async fn load_with_filepath(
+		pools: &mut ResourcePools,
+		file_path: &str,
+		format: Option<TextureFormat>,
+	) -> ResourceId<Texture> {
+		let path = std::path::Path::new(file_path);
+		// @TODO: proper error handling
+		match path.extension() {
+			Some(extension) => match extension.to_str() {
+				Some(str) => match str.to_lowercase().as_str() {
+					"png" => Self::load_png_with_filepath(pools, file_path, format).await,
+					"jpg" | "jpeg" => Self::load_jpg_with_filepath(pools, file_path, format).await,
+					_ => panic!("Unknown texture image format, {:?}", extension),
+				},
+				None => panic!("Can not detect image file format from the file path, {}", file_path),
+			},
+			None => panic!("Can not detect image file format from the file path, {}", file_path),
+		}
 	}
 
 	pub fn create_default_sampler(

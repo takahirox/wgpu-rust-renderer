@@ -458,8 +458,7 @@ async fn parse_texture(
 	use gltf::image::Source;
 	let texture = match source.source() {
 		Source::Uri {uri, mime_type: _mime_type} => {
-			// @Support PNG
-			TextureLoader::load_jpg_with_filepath(
+			TextureLoader::load_with_filepath(
 				pools,
 				&(path.to_owned() + uri),
 				format,
