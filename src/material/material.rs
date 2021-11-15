@@ -14,6 +14,18 @@ use crate::{
 	},
 };
 
+pub enum Side {
+	BackSide,
+	DoubleSide,
+	FrontSide,
+}
+
+impl Default for Side {
+	fn default() -> Self {
+		Side::FrontSide
+	}
+}
+
 const PREFIX_CHUNK1: &str = "struct VertexOutput {
   [[builtin(position)]] position: vec4<f32>;
   [[location(1)]] normal: vec3<f32>;
@@ -128,14 +140,23 @@ const FRAGMENT_CHUNK2: &str = "
 ";
 
 pub struct Material {
-	color: ResourceId<Box<dyn MaterialNode>>
+	color: ResourceId<Box<dyn MaterialNode>>,
+	side: Side,
 }
 
 impl Material {
-	pub fn new(color: ResourceId<Box<dyn MaterialNode>>) -> Self {
+	pub fn new(
+		color: ResourceId<Box<dyn MaterialNode>>,
+		side: Side,
+	) -> Self {
 		Material {
 			color: color,
+			side: side,
 		}
+	}
+
+	pub fn borrow_side(&self) -> &Side {
+		&self.side
 	}
 
 	// @TODO: Optimize?

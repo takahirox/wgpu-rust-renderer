@@ -7,7 +7,10 @@ use crate::{
 		index::Index,
 	},
 	material::{
-		material::Material,
+		material::{
+			Material,
+			Side,
+		},
 		node::{
 			add::AddNode,
 			brdf::{
@@ -296,7 +299,7 @@ async fn parse_material(
 		),
 	));
 
-	pools.borrow_mut::<Material>().add(Material::new(add))
+	pools.borrow_mut::<Material>().add(Material::new(add, Side::default()))
 }
 
 async fn parse_node(

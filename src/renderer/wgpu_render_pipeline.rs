@@ -3,7 +3,10 @@ use std::collections::HashMap;
 
 use crate::{
 	material::{
-		material::Material,
+		material::{
+			Material,
+			Side,
+		},
 		node::node::MaterialNode,
 	},
 	resource::resource::{
@@ -23,6 +26,7 @@ impl WGPURenderPipeline {
 		bind_group_layout: &wgpu::BindGroupLayout,
 		shader_code: &str,
 		sample_count: u32,
+		side: &Side,
 	) -> Self {
 		// For debug
 		//println!("{}", shader_code);
@@ -95,8 +99,16 @@ impl WGPURenderPipeline {
 			// Backface culling
 			// @TODO: Should be configurable 
 			primitive: wgpu::PrimitiveState {
-				cull_mode: Some(wgpu::Face::Back),
-				front_face: wgpu::FrontFace::Ccw,
+				cull_mode: match side {
+					Side::BackSide | 
+					Side::FrontSide => Some(wgpu::Face::Back),
+					Side::DoubleSide => None,
+				},
+				front_face: match side {
+					Side::BackSide => wgpu::FrontFace::Cw,
+					Side::DoubleSide |
+					Side::FrontSide => wgpu::FrontFace::Ccw,
+				},
 				..Default::default()
 			},
 			depth_stencil: Some(wgpu::DepthStencilState {
@@ -156,6 +168,7 @@ impl WGPURenderPipelines {
 						pools.borrow::<Box<dyn MaterialNode>>(),
 					),
 					sample_count,
+					material.borrow_side(),
 				)
 			);
 		}

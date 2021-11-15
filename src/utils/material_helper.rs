@@ -1,6 +1,9 @@
 use crate::{
 	material::{
-		material::Material,
+		material::{
+			Material,
+			Side,
+		},
 		node::{
 			brdf::{
 				BRDFNode,
@@ -43,7 +46,7 @@ impl MaterialHelper {
 			)),
 		);
 
-		pools.borrow_mut::<Material>().add(Material::new(color_node))
+		pools.borrow_mut::<Material>().add(Material::new(color_node, Side::default()))
 	}
 
 	pub fn create_basic_material_with_texture(
@@ -73,7 +76,7 @@ impl MaterialHelper {
 			Box::new(MultiplyNode::new(color, texture_rgb)),
 		);
 
-		pools.borrow_mut::<Material>().add(Material::new(color_node))
+		pools.borrow_mut::<Material>().add(Material::new(color_node, Side::default()))
 	}
 
 	pub fn create_brdf_material(
@@ -111,6 +114,6 @@ impl MaterialHelper {
 			Box::new(BRDFNode::new(desc)),
 		);
 
-		pools.borrow_mut::<Material>().add(Material::new(brdf_node))
+		pools.borrow_mut::<Material>().add(Material::new(brdf_node, Side::default()))
 	}
 }
