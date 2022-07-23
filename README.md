@@ -30,7 +30,7 @@ Web application.
 * Good flexibility and extensibility of materials with node-based material system
 * Web application compatible by compiling to WebAssembly
 
-## Documents
+## Documentation
 
 T.B.D.
 
@@ -67,7 +67,7 @@ use wgpu_rust_renderer::{
 fn create_scene(
   window: &Window,
   pools: &mut ResourcePools,
-) -> (ResourceId<Scene>, ResourceId<Camera>) {
+) -> (ResourceId<Scene>, ResourceId<PerspectiveCamera>) {
   let mut scene = Scene::new();
 
   let geometry = GeometryHelper::create_triangle(
@@ -193,7 +193,7 @@ The library is released at [crates.io](https://crates.io/crates/wgpu_rust_render
 
 ```
 [dependencies]
-wgpu_rust_renderer = "0.0.3"
+wgpu_rust_renderer = "0.0.4"
 ```
 
 And add the following lines in your Rust code to import the library.
@@ -239,7 +239,7 @@ $ cd wgpu-rust-renderer
 $ cargo run --example example_name
 ```
 
-## How to run web examles locally
+## How to run web examples locally
 
 Prerequirements
 - Install [wasm-bindgen client](https://rustwasm.github.io/docs/wasm-bindgen/)
