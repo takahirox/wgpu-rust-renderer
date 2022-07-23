@@ -29,25 +29,25 @@ use crate::{
 
 pub struct WGPURendererOptions {
 	pub sample_count: u32,
+	pub presentation_mode: wgpu::PresentMode
 }
 
 impl Default for WGPURendererOptions {
 	fn default() -> Self {
 		WGPURendererOptions {
 			sample_count: 4,
+			presentation_mode: wgpu::PresentMode::Mailbox,
 		}
 	}
 }
 
 pub struct WGPURenderer {
+	device: wgpu::Device,
 	attributes: WGPUAttributes,
 	bindings: WGPUBindings,
-	color_buffer: wgpu::Texture,
-	device: wgpu::Device,
-	depth_buffer: wgpu::Texture,
-	height: f64,
 	indices: WGPUIndices,
-	pixel_ratio: f64,
+	color_buffer: wgpu::Texture,
+	depth_buffer: wgpu::Texture,
 	queue: wgpu::Queue,
 	render_pipelines: WGPURenderPipelines,
 	sample_count: u32,
@@ -56,13 +56,17 @@ pub struct WGPURenderer {
 	surface_configuration: wgpu::SurfaceConfiguration,
 	textures: WGPUTextures,
 	width: f64,
+	height: f64,
+	pixel_ratio: f64,
+	minimized: bool
 }
 
 impl WGPURenderer {
 	pub async fn new(window: &Window, options: WGPURendererOptions) -> Self {
-		let width = 640.0;
-		let height = 480.0;
-		let pixel_ratio = 1.0;
+		let window_size = window.inner_size();
+		let width = window_size.width as f64;
+		let height = window_size.height as f64;
+		let pixel_ratio = window.scale_factor();
 
 		let instance = wgpu::Instance::new(wgpu::Backends::all());
 		let surface = unsafe { instance.create_surface(window) };
@@ -91,7 +95,7 @@ impl WGPURenderer {
 			// @TODO: Color management
 			format: wgpu::TextureFormat::Bgra8Unorm,
 			height: (height * pixel_ratio) as u32,
-			present_mode: wgpu::PresentMode::Mailbox,
+			present_mode: options.presentation_mode,
 			usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
 			width: (width * pixel_ratio) as u32,
 		};
@@ -115,18 +119,19 @@ impl WGPURenderer {
 				pixel_ratio,
 				options.sample_count,
 			),
-			device: device,
-			height: height,
+			device,
+			height,
 			indices: WGPUIndices::new(),
-			pixel_ratio: pixel_ratio,
-			queue: queue,
+			pixel_ratio,
+			queue,
 			render_pipelines: WGPURenderPipelines::new(),
 			sample_count: options.sample_count,
 			samplers: WGPUSamplers::new(),
-			surface: surface,
-			surface_configuration: surface_configuration,
+			surface,
+			surface_configuration,
 			textures: WGPUTextures::new(),
-			width: width
+			width,
+			minimized: false
 		}
 	}
 
@@ -134,15 +139,24 @@ impl WGPURenderer {
 		self.width = width;
 		self.height = height;
 
-		self.update_surface_configuration();
-		self.recreate_color_buffer();
-		self.recreate_depth_buffer();
+		if width == 0.0 || height == 0.0 {
+			self.minimized = true;
+		} else {
+			self.minimized = false;
+			self.update_surface_configuration();
+			self.recreate_color_buffer();
+			self.recreate_depth_buffer();
+		}
 
 		self
 	}
 
 	pub fn get_size(&self) -> (f64, f64) {
 		(self.width, self.height)
+	}
+
+	pub fn is_minimized(&self) -> bool {
+		self.minimized
 	}
 
 	pub fn set_pixel_ratio(&mut self, pixel_ratio: f64) -> &mut Self {
@@ -387,8 +401,10 @@ impl WGPURenderer {
 		scene_rid: &ResourceId<Scene>,
 		camera_rid: &ResourceId<PerspectiveCamera>,
 	) {
-		self.update(pools, scene_rid, camera_rid);
-		self.render_internal(pools, scene_rid);
+		if !self.minimized {
+			self.update(pools, scene_rid, camera_rid);
+			self.render_internal(pools, scene_rid);
+		}
 	}
 
 	fn update_surface_configuration(&mut self) {
